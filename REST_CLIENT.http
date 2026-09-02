@@ -1,0 +1,6 @@
+@baseUrl = http://localhost:3001/api
+
+
+### 健康检查
+GET {{baseUrl}}/health
+Content-Type: application/json
