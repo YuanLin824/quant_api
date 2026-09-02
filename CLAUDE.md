@@ -104,6 +104,6 @@ ALLOWED_ORIGINS="https://example.com"  # 生产环境必须配置
 - 配置命名空间使用 `CONFIG_MODULES` 中的 Symbol
 - 从不自动提交任何代码
 - DEVELOPMENT-PLAN.md 是开发计划文档，所有开发计划和任务都在此文档中列出
-- git 提交代码使用 `commitlint` + `lintstage` 进行约束 (提交信息必须带上 Emoji)
+- commitlint.config.cjs 是 commitlint 的配置文件(按照这个格式 type(scope): emoji subject 生成提交信息)
 - docker-compose 默认已执行过
 - 不自动启动任何服务，需要启动其他服务时，要进行授权确认
