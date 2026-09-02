@@ -1,0 +1,51 @@
+# 默认自动读取 .env 中的环境变量
+# 手动指定环境变量: docker compose -f docker-compose.yml --env-file .env up -d
+
+name: quant
+
+services:
+  postgres:
+    # image: timescaledb-ha:pg18
+    # 下载失败时,可使用该镜像源
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/timescale/timescaledb-ha:pg18
+    container_name: quant_postgres
+    ports:
+      - "${PG_PORT:-5432}:5432"
+    environment:
+      TZ: Asia/Shanghai
+      PGTZ: Asia/Shanghai
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Quant.Postgres.5432
+      POSTGRES_DB: postgres
+      PG_USER: ${PG_USER:-quant}
+      PG_PASS: ${PG_PASS:-quant.postgres}
+      PG_DB: ${PG_DB:-quant_db}
+    volumes:
+      - postgres_data:/home/postgres/
+      - ./docker-compose/postgres.sh:/docker-entrypoint-initdb.d/postgres.sh:ro
+    restart: unless-stopped
+
+  redis:
+    image: redis:8-alpine
+    # 下载失败时,可使用该镜像源
+    # image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/redis:8-alpine
+    container_name: quant_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    environment:
+      TZ: Asia/Shanghai
+      PGTZ: Asia/Shanghai
+      ROOT_USER: admin
+      ROOT_PASS: Quant.Redis.6379
+      REDIS_USER: ${REDIS_USER:-quant}
+      REDIS_PASS: ${REDIS_PASS:-quant.redis}
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-quant-}
+    volumes:
+      - redis_data:/data/
+      - ./docker-compose/redis.sh:/etc/redis/redis.sh:ro
+    entrypoint: ["/bin/sh", "/etc/redis/redis.sh"]
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
