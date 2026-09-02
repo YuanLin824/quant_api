@@ -36,4 +36,5 @@ export interface DeviceInfo {
 export interface TokenResult {
   accessToken: string
   refreshToken: string
+  username: string
 }

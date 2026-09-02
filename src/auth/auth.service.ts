@@ -142,7 +142,7 @@ export class AuthService {
       expiresAt: Date.now() + this.globalConfig.refreshExpiresIn * 1000,
     })
 
-    return { accessToken, refreshToken }
+    return { accessToken, refreshToken, username: user.username }
   }
 
   /**
@@ -178,7 +178,7 @@ export class AuthService {
       loginAt: Date.now(),
       expiresAt: Date.now() + this.globalConfig.refreshExpiresIn * 1000,
     })
-    return { accessToken, refreshToken }
+    return { accessToken, refreshToken, username: user.username }
   }
 
   /** 签发双 token；access 无状态（无 jti），refresh 携带 jti 作为会话吊销依据；双密钥各自签名 */
@@ -200,7 +200,7 @@ export class AuthService {
         }
       ),
     ])
-    return { accessToken, refreshToken, jti }
+    return { accessToken, refreshToken, username: user.username, jti }
   }
 
   /**
