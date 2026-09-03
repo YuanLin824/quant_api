@@ -4,3 +4,89 @@
 ### 健康检查
 GET {{baseUrl}}/health
 Content-Type: application/json
+
+
+### 用户注册
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "Password@123"
+}
+
+
+### 用户登录
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "Password@123"
+}
+
+
+### 刷新令牌
+# @name refresh
+POST {{baseUrl}}/auth/refresh
+Authorization: Bearer {{login.response.body.data.refreshToken}}
+
+
+### 用户登出
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{login.response.body.data.refreshToken}}"
+}
+
+
+### 获取用户信息
+GET {{baseUrl}}/auth/profile
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 获取A股贵州茅台行情
+GET {{baseUrl}}/stock/quote/SH/600519
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 获取港股腾讯行情
+GET {{baseUrl}}/stock/quote/HK/00700
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 获取美股苹果行情
+GET {{baseUrl}}/stock/quote/US/AAPL
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 批量获取股票行情
+POST {{baseUrl}}/stock/quotes
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "codes": [
+    "SH600519",
+    "SZ000651",
+    "HK00700"
+  ]
+}
+
+
+### 获取K线数据（日K）
+GET {{baseUrl}}/stock/kline/SH/600519?period=day&count=30
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 获取K线数据（周K）
+GET {{baseUrl}}/stock/kline/HK/00700?period=week
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 搜索股票
+GET {{baseUrl}}/stock/search?keyword=茅台
+Authorization: Bearer {{login.response.body.data.accessToken}}
