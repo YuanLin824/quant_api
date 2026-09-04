@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
 import { SkipThrottle } from '@nestjs/throttler'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
-import { GetFundQuotesDto, GetQuotesDto, SearchDto } from './dto'
+import { GetFundQuotesDto, GetQuotesBodyDto, GetQuotesParamsDto, SearchDto } from './dto'
 import { StockSdkService } from './stock-sdk.service'
 
 /**
@@ -21,8 +21,8 @@ export class StockSdkController {
    * POST /api/stock-sdk/quotes/:market
    */
   @Post('quotes/:market')
-  async getQuotes(@Param('market') market: string, @Body() dto: GetQuotesDto) {
-    const data = await this.stockSdkService.getQuotes(market, dto.codes)
+  async getQuotes(@Param() params: GetQuotesParamsDto, @Body() body: GetQuotesBodyDto) {
+    const data = await this.stockSdkService.getQuotes(params.market, body.codes)
     return { code: 200, message: '获取成功', data }
   }
 

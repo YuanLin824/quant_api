@@ -1,9 +1,14 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
 import { SkipThrottle } from '@nestjs/throttler'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
-import { GetStockDto, GetStocksDto, SearchStocksDto } from './dto'
+import {
+  GetKlinesParamsDto,
+  GetKlinesQueryDto,
+  GetStockDto,
+  GetStocksDto,
+  SearchStocksDto,
+} from './dto'
 import { StockApiService } from './stock-api.service'
-import { KlinePeriod } from './stock-api.types'
 
 /**
  * 股票行情控制器
@@ -42,12 +47,13 @@ export class StockApiController {
    * GET /api/stock-api/kline/:market/:code?period=day&count=120
    */
   @Get('kline/:market/:code')
-  async getKlines(
-    @Param() params: GetStockDto,
-    @Query('period') period: KlinePeriod = KlinePeriod.DAY,
-    @Query('count') count: number = 120
-  ) {
-    const data = await this.stockApiService.getKlines(params.market, params.code, period, count)
+  async getKlines(@Param() params: GetKlinesParamsDto, @Query() query: GetKlinesQueryDto) {
+    const data = await this.stockApiService.getKlines(
+      params.market,
+      params.code,
+      query.period,
+      query.count
+    )
     return { code: 200, message: '获取成功', data }
   }
 

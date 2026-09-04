@@ -14,9 +14,9 @@
 
 ## 文档结构
 
-API 文档已拆分到 `docs` 目录：
+API 文档位于项目根目录和 `docs` 目录：
 
-- `docs/index.md` — 基础信息、通用响应格式、错误码说明
+- `API.md` — API 文档入口，包含基础信息、通用响应格式、错误码说明
 - `docs/health.md` — 健康检查接口
 - `docs/auth.md` — 认证接口（注册、登录、刷新、登出、用户信息）
 - `docs/stock-api.md` — Stock API 接口（行情、K线、搜索）

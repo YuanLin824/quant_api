@@ -1,6 +1,6 @@
 # Stock API 接口
 
-[← 返回目录](./index.md)
+[← 返回目录](../API.md)
 
 > 所有 Stock API 接口需要 JWT 认证，请在请求头中携带 `Authorization: Bearer <access_token>`
 >
