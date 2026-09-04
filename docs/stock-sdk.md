@@ -1,0 +1,365 @@
+# Stock SDK 接口
+
+[← 返回目录](./index.md)
+
+> 所有 Stock SDK 接口需要 JWT 认证，请在请求头中携带 `Authorization: Bearer <access_token>`
+>
+> 使用 stock-sdk 库，支持 A 股、港股、美股和基金行情查询
+>
+> 响应数据直接返回 stock-sdk 原始格式，详见 [stock-sdk 文档](https://stock-sdk.linkdiary.cn)
+
+## 获取股票行情
+
+批量获取指定市场的股票行情数据。
+
+**请求**
+
+```
+POST /api/stock-sdk/quotes/:market
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**路径参数**
+
+| 参数   | 类型   | 必填 | 说明                                          |
+| ------ | ------ | ---- | --------------------------------------------- |
+| market | string | 是   | 市场类型: `cn`(A股) / `hk`(港股) / `us`(美股) |
+
+**请求体**
+
+| 参数  | 类型     | 必填 | 说明         |
+| ----- | -------- | ---- | ------------ |
+| codes | string[] | 是   | 股票代码数组 |
+
+**请求示例**
+
+```json
+{
+  "codes": ["600519", "000651", "000858"]
+}
+```
+
+### A 股响应 (FullQuote)
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": [
+    {
+      "marketId": "sh600519",
+      "name": "贵州茅台",
+      "code": "600519",
+      "price": 1800.0,
+      "prevClose": 1779.5,
+      "open": 1785.0,
+      "volume": 123456,
+      "outerVolume": 60000,
+      "innerVolume": 63456,
+      "bid": [
+        { "price": 1799.0, "volume": 100 },
+        { "price": 1798.0, "volume": 200 }
+      ],
+      "ask": [
+        { "price": 1800.0, "volume": 150 },
+        { "price": 1801.0, "volume": 250 }
+      ],
+      "time": "20240115150000",
+      "timestamp": 1705276800000,
+      "tz": "Asia/Shanghai",
+      "change": 20.5,
+      "changePercent": 1.15,
+      "high": 1810.0,
+      "low": 1780.0,
+      "volume2": 123456,
+      "amount": 222222,
+      "turnoverRate": 0.85,
+      "pe": 35.5,
+      "amplitude": 1.68,
+      "circulatingMarketCap": 22500,
+      "totalMarketCap": 28000,
+      "pb": 10.2,
+      "limitUp": 1957.5,
+      "limitDown": 1601.5,
+      "volumeRatio": 1.2,
+      "avgPrice": 1795.0,
+      "peStatic": 35.5,
+      "peDynamic": 32.8,
+      "high52w": 1900.0,
+      "low52w": 1500.0,
+      "circulatingShares": 1250000000,
+      "totalShares": 1560000000,
+      "market": "CN",
+      "assetType": "stock",
+      "source": "tencent"
+    }
+  ]
+}
+```
+
+### 港股响应 (HKQuote)
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": [
+    {
+      "marketId": "hk00700",
+      "name": "腾讯控股",
+      "code": "00700",
+      "price": 380.0,
+      "prevClose": 375.0,
+      "open": 375.0,
+      "volume": 8000000,
+      "time": "20240115160000",
+      "timestamp": 1705282800000,
+      "tz": "Asia/Hong_Kong",
+      "change": 5.0,
+      "changePercent": 1.33,
+      "high": 385.0,
+      "low": 370.0,
+      "amount": 3040000,
+      "lotSize": 100,
+      "circulatingMarketCap": 36000,
+      "totalMarketCap": 38000,
+      "currency": "HKD",
+      "market": "HK",
+      "assetType": "stock",
+      "source": "tencent"
+    }
+  ]
+}
+```
+
+### 美股响应 (USQuote)
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": [
+    {
+      "marketId": "usAAPL",
+      "name": "苹果",
+      "code": "AAPL",
+      "price": 195.0,
+      "prevClose": 191.5,
+      "open": 192.0,
+      "volume": 50000000,
+      "time": "20240115160000",
+      "timestamp": 1705282800000,
+      "tz": "America/New_York",
+      "change": 3.5,
+      "changePercent": 1.83,
+      "high": 196.0,
+      "low": 191.0,
+      "amount": 9750000,
+      "turnoverRate": 0.32,
+      "pe": 30.5,
+      "amplitude": 2.61,
+      "totalMarketCap": 30000,
+      "pb": 50.2,
+      "high52w": 199.0,
+      "low52w": 120.0,
+      "market": "US",
+      "assetType": "stock",
+      "source": "tencent"
+    }
+  ]
+}
+```
+
+**示例**
+
+```bash
+# 批量获取A股行情
+curl -X POST http://localhost:3001/api/stock-sdk/quotes/cn \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"codes": ["600519", "000651", "000858"]}'
+
+# 批量获取港股行情
+curl -X POST http://localhost:3001/api/stock-sdk/quotes/hk \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"codes": ["00700", "09988"]}'
+
+# 批量获取美股行情
+curl -X POST http://localhost:3001/api/stock-sdk/quotes/us \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"codes": ["AAPL", "MSFT"]}'
+```
+
+---
+
+## 获取基金行情
+
+批量获取基金的实时净值数据。
+
+**请求**
+
+```
+POST /api/stock-sdk/funds
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**请求体**
+
+| 参数  | 类型     | 必填 | 说明         |
+| ----- | -------- | ---- | ------------ |
+| codes | string[] | 是   | 基金代码数组 |
+
+**请求示例**
+
+```json
+{
+  "codes": ["005827", "161725", "110011"]
+}
+```
+
+**响应 (FundQuote)**
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": [
+    {
+      "code": "005827",
+      "name": "易方达蓝筹精选混合",
+      "nav": 1.2345,
+      "accNav": 1.2345,
+      "change": 0.0123,
+      "navDate": "2024-01-15",
+      "timestamp": 1705276800000,
+      "tz": "Asia/Shanghai",
+      "market": "CN",
+      "assetType": "fund",
+      "source": "eastmoney"
+    }
+  ]
+}
+```
+
+**响应字段说明**
+
+| 字段      | 说明                                       |
+| --------- | ------------------------------------------ |
+| code      | 基金代码                                   |
+| name      | 基金名称                                   |
+| nav       | 单位净值                                   |
+| accNav    | 累计净值                                   |
+| change    | 当日涨跌额                                 |
+| navDate   | 净值日期 (YYYY-MM-DD)                      |
+| timestamp | 净值日期时间戳 (毫秒)，无法解析时为 `null` |
+| tz        | 时区 (`Asia/Shanghai`)                     |
+| market    | 市场 (`CN`)                                |
+| assetType | 资产类型 (`fund`)                          |
+| source    | 数据源                                     |
+
+**示例**
+
+```bash
+# 批量获取基金行情
+curl -X POST http://localhost:3001/api/stock-sdk/funds \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"codes": ["005827", "161725", "110011"]}'
+```
+
+---
+
+## 搜索股票/指数/基金
+
+根据关键词搜索股票、指数或基金。
+
+**请求**
+
+```
+GET /api/stock-sdk/search
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**查询参数**
+
+| 参数    | 类型   | 必填 | 说明       |
+| ------- | ------ | ---- | ---------- |
+| keyword | string | 是   | 搜索关键词 |
+
+**响应 (SearchResult)**
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": [
+    {
+      "code": "sh600519",
+      "name": "贵州茅台",
+      "market": "sh",
+      "type": "GP-A",
+      "category": "stock"
+    },
+    {
+      "code": "sh000300",
+      "name": "沪深300",
+      "market": "sh",
+      "type": "ZS",
+      "category": "index"
+    },
+    {
+      "code": "005827",
+      "name": "易方达蓝筹精选混合",
+      "market": "",
+      "type": "JJ",
+      "category": "fund"
+    }
+  ]
+}
+```
+
+**响应字段说明**
+
+| 字段     | 说明                                               |
+| -------- | -------------------------------------------------- |
+| code     | 代码（带市场前缀，如 `sh600519`）                  |
+| name     | 名称                                               |
+| market   | 市场标识（如 `sh`/`sz`/`hk`/`us`）                 |
+| type     | 上游原始资产类型（如 `GP-A`/`ZS`/`JJ`）            |
+| category | 标准化资产分类（`stock`/`index`/`fund`），可选字段 |
+
+**示例**
+
+```bash
+# 搜索茅台
+curl http://localhost:3001/api/stock-sdk/search?keyword=茅台 \
+  -H "Authorization: Bearer <access_token>"
+
+# 搜索沪深300指数
+curl http://localhost:3001/api/stock-sdk/search?keyword=沪深300 \
+  -H "Authorization: Bearer <access_token>"
+
+# 搜索基金
+curl http://localhost:3001/api/stock-sdk/search?keyword=易方达 \
+  -H "Authorization: Bearer <access_token>"
+```
