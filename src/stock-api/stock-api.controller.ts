@@ -1,8 +1,9 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
 import { SkipThrottle } from '@nestjs/throttler'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { GetStockDto, GetStocksDto, SearchStocksDto } from './dto'
 import { StockApiService } from './stock-api.service'
-import { GetStockDto, GetStocksDto, KlinePeriod, SearchStocksDto } from './stock-api.types'
+import { KlinePeriod } from './stock-api.types'
 
 /**
  * 股票行情控制器

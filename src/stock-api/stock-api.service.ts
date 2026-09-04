@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { stocks } from 'stock-api'
-import { KlineData, KlinePeriod, Market, StockQuote } from './stock-api.types'
+import { KlinePeriod, Market } from './stock-api.types'
 
 /**
  * 股票行情服务
@@ -17,43 +17,21 @@ export class StockApiService {
    * @param market 市场类型 (SH/SZ/HK/US)
    * @param code 股票代码
    */
-  async getStock(market: Market, code: string): Promise<StockQuote> {
+  async getStock(market: Market, code: string): Promise<any> {
     const fullCode = `${market}${code}`
     this.logger.log(`获取股票行情: ${fullCode}`)
 
-    const stock = await stocks.auto.getStock(fullCode)
-
-    return {
-      code: stock.code,
-      name: stock.name,
-      now: stock.now,
-      percent: stock.percent,
-      low: stock.low,
-      high: stock.high,
-      yesterday: stock.yesterday,
-      source: stock.source,
-    }
+    return stocks.auto.getStock(fullCode)
   }
 
   /**
    * 批量获取股票行情
    * @param codes 完整股票代码数组 (如 ["SH600519", "SZ000651"])
    */
-  async getStocks(codes: string[]): Promise<StockQuote[]> {
+  async getStocks(codes: string[]): Promise<any[]> {
     this.logger.log(`批量获取股票行情: ${codes.join(', ')}`)
 
-    const list = await stocks.auto.getStocks(codes)
-
-    return list.map((stock) => ({
-      code: stock.code,
-      name: stock.name,
-      now: stock.now,
-      percent: stock.percent,
-      low: stock.low,
-      high: stock.high,
-      yesterday: stock.yesterday,
-      source: stock.source,
-    }))
+    return stocks.auto.getStocks(codes)
   }
 
   /**
@@ -68,44 +46,23 @@ export class StockApiService {
     code: string,
     period: KlinePeriod = KlinePeriod.DAY,
     count: number = 120
-  ): Promise<KlineData[]> {
+  ): Promise<any[]> {
     const fullCode = `${market}${code}`
     this.logger.log(`获取K线数据: ${fullCode}, 周期: ${period}, 数量: ${count}`)
 
-    const klines = await stocks.auto.getKlines(fullCode, {
+    return stocks.auto.getKlines(fullCode, {
       period,
       count,
     })
-
-    return klines.map((kline) => ({
-      date: kline.date,
-      open: kline.open,
-      close: kline.close,
-      high: kline.high,
-      low: kline.low,
-      volume: kline.volume,
-      source: kline.source,
-    }))
   }
 
   /**
    * 搜索股票
    * @param keyword 搜索关键词
    */
-  async searchStocks(keyword: string): Promise<StockQuote[]> {
+  async searchStocks(keyword: string): Promise<any[]> {
     this.logger.log(`搜索股票: ${keyword}`)
 
-    const results = await stocks.auto.searchStocks(keyword)
-
-    return results.map((stock) => ({
-      code: stock.code,
-      name: stock.name,
-      now: stock.now,
-      percent: stock.percent,
-      low: stock.low,
-      high: stock.high,
-      yesterday: stock.yesterday,
-      source: stock.source,
-    }))
+    return stocks.auto.searchStocks(keyword)
   }
 }
