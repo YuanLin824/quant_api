@@ -280,7 +280,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-## 股票行情接口
+## Stock API 接口
 
 > 所有股票接口需要 JWT 认证，请在请求头中携带 `Authorization: Bearer <access_token>`
 
@@ -291,7 +291,7 @@ Authorization: Bearer <access_token>
 **请求**
 
 ```
-GET /api/stock/quote/:market/:code
+GET /api/stock-api/quote/:market/:code
 Authorization: Bearer <access_token>
 ```
 
@@ -331,15 +331,15 @@ Authorization: Bearer <access_token>
 
 ```bash
 # 获取A股贵州茅台行情
-curl http://localhost:3001/api/stock/quote/SH/600519 \
+curl http://localhost:3001/api/stock-api/quote/SH/600519 \
   -H "Authorization: Bearer <access_token>"
 
 # 获取港股腾讯行情
-curl http://localhost:3001/api/stock/quote/HK/00700 \
+curl http://localhost:3001/api/stock-api/quote/HK/00700 \
   -H "Authorization: Bearer <access_token>"
 
 # 获取美股苹果行情
-curl http://localhost:3001/api/stock/quote/US/AAPL \
+curl http://localhost:3001/api/stock-api/quote/US/AAPL \
   -H "Authorization: Bearer <access_token>"
 ```
 
@@ -352,7 +352,7 @@ curl http://localhost:3001/api/stock/quote/US/AAPL \
 **请求**
 
 ```
-POST /api/stock/quotes
+POST /api/stock-api/quotes
 Authorization: Bearer <access_token>
 ```
 
@@ -406,7 +406,7 @@ Authorization: Bearer <access_token>
 **请求**
 
 ```
-GET /api/stock/kline/:market/:code
+GET /api/stock-api/kline/:market/:code
 Authorization: Bearer <access_token>
 ```
 
@@ -454,11 +454,11 @@ Authorization: Bearer <access_token>
 
 ```bash
 # 获取A股贵州茅台日K线
-curl http://localhost:3001/api/stock/kline/SH/600519?period=day&count=30 \
+curl http://localhost:3001/api/stock-api/kline/SH/600519?period=day&count=30 \
   -H "Authorization: Bearer <access_token>"
 
 # 获取港股腾讯周K线
-curl http://localhost:3001/api/stock/kline/HK/00700?period=week \
+curl http://localhost:3001/api/stock-api/kline/HK/00700?period=week \
   -H "Authorization: Bearer <access_token>"
 ```
 
@@ -471,7 +471,7 @@ curl http://localhost:3001/api/stock/kline/HK/00700?period=week \
 **请求**
 
 ```
-GET /api/stock/search
+GET /api/stock-api/search
 Authorization: Bearer <access_token>
 ```
 
@@ -512,11 +512,11 @@ Authorization: Bearer <access_token>
 
 ```bash
 # 搜索茅台
-curl http://localhost:3001/api/stock/search?keyword=茅台 \
+curl http://localhost:3001/api/stock-api/search?keyword=茅台 \
   -H "Authorization: Bearer <access_token>"
 
 # 搜索格力
-curl http://localhost:3001/api/stock/search?keyword=格力电器 \
+curl http://localhost:3001/api/stock-api/search?keyword=格力电器 \
   -H "Authorization: Bearer <access_token>"
 ```
 
@@ -658,10 +658,10 @@ curl http://localhost:3001/api/auth/profile \
   -H "Authorization: Bearer <access_token>"
 
 # 获取股票行情
-curl http://localhost:3001/api/stock/quote/SH/600519
-curl http://localhost:3001/api/stock/quote/HK/00700
-curl http://localhost:3001/api/stock/quote/US/AAPL
+curl http://localhost:3001/api/stock-api/quote/SH/600519
+curl http://localhost:3001/api/stock-api/quote/HK/00700
+curl http://localhost:3001/api/stock-api/quote/US/AAPL
 
 # 搜索股票
-curl http://localhost:3001/api/stock/search?keyword=茅台
+curl http://localhost:3001/api/stock-api/search?keyword=茅台
 ```

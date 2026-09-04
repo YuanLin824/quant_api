@@ -13,7 +13,7 @@ import { GLOBAL_CONFIG } from './config/global.config'
 import { PostgresModule } from './database/postgres.module'
 import { RedisModule } from './database/redis.module'
 import { RedisService } from './database/redis.service'
-import { StockModule } from './stock/stock.module'
+import { StockApiModule } from './stock-api/stock-api.module'
 
 // @Global() 使本模块的 providers/exports 在所有子模块中可直接注入，无需重复 import
 @Global()
@@ -42,7 +42,7 @@ import { StockModule } from './stock/stock.module'
     PostgresModule,
     RedisModule,
     AuthModule,
-    StockModule,
+    StockApiModule,
   ],
 
   controllers: [AppController],

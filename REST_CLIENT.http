@@ -48,23 +48,26 @@ GET {{baseUrl}}/auth/profile
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
+### ========== Stock API 接口 ==========
+
+
 ### 获取A股贵州茅台行情
-GET {{baseUrl}}/stock/quote/SH/600519
+GET {{baseUrl}}/stock-api/quote/SH/600519
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
 ### 获取港股腾讯行情
-GET {{baseUrl}}/stock/quote/HK/00700
+GET {{baseUrl}}/stock-api/quote/HK/00700
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
 ### 获取美股苹果行情
-GET {{baseUrl}}/stock/quote/US/AAPL
+GET {{baseUrl}}/stock-api/quote/US/AAPL
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
 ### 批量获取股票行情
-POST {{baseUrl}}/stock/quotes
+POST {{baseUrl}}/stock-api/quotes
 Content-Type: application/json
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
@@ -78,15 +81,15 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
 ### 获取K线数据（日K）
-GET {{baseUrl}}/stock/kline/SH/600519?period=day&count=30
+GET {{baseUrl}}/stock-api/kline/SH/600519?period=day&count=30
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
 ### 获取K线数据（周K）
-GET {{baseUrl}}/stock/kline/HK/00700?period=week
+GET {{baseUrl}}/stock-api/kline/HK/00700?period=week
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
 ### 搜索股票
-GET {{baseUrl}}/stock/search?keyword=茅台
+GET {{baseUrl}}/stock-api/search?keyword=茅台
 Authorization: Bearer {{login.response.body.data.accessToken}}

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { stocks } from 'stock-api'
-import { KlineData, KlinePeriod, Market, StockQuote } from './stock.types'
+import { KlineData, KlinePeriod, Market, StockQuote } from './stock-api.types'
 
 /**
  * 股票行情服务
@@ -9,8 +9,8 @@ import { KlineData, KlinePeriod, Market, StockQuote } from './stock.types'
  * 使用 stocks.auto 自动兜底：tencent -> sina -> eastmoney
  */
 @Injectable()
-export class StockService {
-  private readonly logger = new Logger(StockService.name)
+export class StockApiService {
+  private readonly logger = new Logger(StockApiService.name)
 
   /**
    * 获取单只股票行情
