@@ -363,3 +363,106 @@ curl http://localhost:3001/api/stock-sdk/search?keyword=沪深300 \
 curl http://localhost:3001/api/stock-sdk/search?keyword=易方达 \
   -H "Authorization: Bearer <access_token>"
 ```
+
+---
+
+## 获取全部市场行情
+
+获取指定市场的全部股票行情数据。
+
+**请求**
+
+```
+GET /api/stock-sdk/batch/:market
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**路径参数**
+
+| 参数   | 类型   | 必填 | 说明                                          |
+| ------ | ------ | ---- | --------------------------------------------- |
+| market | string | 是   | 市场类型: `cn`(A股) / `hk`(港股) / `us`(美股) |
+
+**查询参数**
+
+| 参数        | 类型   | 必填 | 说明                         |
+| ----------- | ------ | ---- | ---------------------------- |
+| batchSize   | number | 否   | 单次请求的股票数量，默认 500 |
+| concurrency | number | 否   | 最大并发请求数，默认 7       |
+
+**响应**
+
+返回 stock-sdk 原始格式的行情数组。
+
+**示例**
+
+```bash
+# 获取全部 A 股行情
+curl http://localhost:3001/api/stock-sdk/batch/cn \
+  -H "Authorization: Bearer <access_token>"
+
+# 获取全部港股行情
+curl http://localhost:3001/api/stock-sdk/batch/hk \
+  -H "Authorization: Bearer <access_token>"
+
+# 获取全部美股行情（指定批次大小和并发数）
+curl http://localhost:3001/api/stock-sdk/batch/us?batchSize=100&concurrency=5 \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## 按代码批量获取行情
+
+根据股票代码批量获取行情数据。
+
+**请求**
+
+```
+POST /api/stock-sdk/batch
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**请求体**
+
+| 参数        | 类型     | 必填 | 说明               |
+| ----------- | -------- | ---- | ------------------ |
+| codes       | string[] | 是   | 股票代码数组       |
+| batchSize   | number   | 否   | 单次请求的股票数量 |
+| concurrency | number   | 否   | 最大并发请求数     |
+
+**请求示例**
+
+```json
+{
+  "codes": ["sh600519", "sz000651", "hk00700", "usAAPL"],
+  "batchSize": 100,
+  "concurrency": 5
+}
+```
+
+**响应**
+
+返回 stock-sdk 原始格式的行情数组（FullQuote）。
+
+**示例**
+
+```bash
+# 按代码批量获取行情
+curl -X POST http://localhost:3001/api/stock-sdk/batch \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"codes": ["sh600519", "sz000651", "hk00700", "usAAPL"]}'
+```

@@ -12,8 +12,8 @@ POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "username": "testuser",
-  "password": "Password@123"
+  "username": "QuantAdmin",
+  "password": "Quant.Admin"
 }
 
 
@@ -23,8 +23,8 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "username": "testuser",
-  "password": "Password@123"
+  "username": "QuantAdmin",
+  "password": "Quant.Admin"
 }
 
 
@@ -181,3 +181,36 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 ### Stock SDK - 搜索基金
 GET {{baseUrl}}/stock-sdk/search?keyword=易方达
 Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### ========== Stock SDK 批量行情接口 ==========
+
+
+### Stock SDK - 获取全部A股行情
+GET {{baseUrl}}/stock-sdk/batch/cn
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取全部港股行情
+GET {{baseUrl}}/stock-sdk/batch/hk
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取全部美股行情
+GET {{baseUrl}}/stock-sdk/batch/us
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 按代码批量获取行情
+POST {{baseUrl}}/stock-sdk/batch
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "codes": [
+    "sh600519",
+    "sz000651",
+    "hk00700",
+    "usAAPL"
+  ]
+}
