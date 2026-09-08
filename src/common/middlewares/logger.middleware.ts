@@ -39,12 +39,12 @@ export class LoggerMiddleware implements NestMiddleware {
 
     // 异步写入日志，不 await——即使日志写入失败也不影响正常请求
     this.logger.log({
-      clientIp: requestIp.getClientIp(req) ?? 'unknown',
-      method: httpAdapter.getRequestMethod(req).toLocaleUpperCase(),
       path: httpAdapter.getRequestUrl(req),
+      method: httpAdapter.getRequestMethod(req).toLocaleUpperCase(),
       body: sanitize(req.body ?? {}),
       params: sanitize(req.params ?? {}),
       query: sanitize(req.query ?? {}),
+      clientIp: requestIp.getClientIp(req) ?? 'unknown',
     })
 
     next()
