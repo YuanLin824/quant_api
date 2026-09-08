@@ -157,6 +157,51 @@ export class AuthService {
     await this.redis.hDel(this.deviceKey(payload.sub), payload.jti)
   }
 
+  /**
+   * 强制登出所有设备：清空用户的所有 refresh token
+   *
+   * 场景：
+   * - 用户主动"登出所有设备"
+   * - 密码修改后强制重新登录
+   * - 管理员禁用用户时清除所有会话
+   */
+  async logoutAll(userId: string): Promise<void> {
+    await this.redis.del(this.deviceKey(userId))
+  }
+
+  /**
+   * 修改密码：更新密码哈希并强制所有设备重新登录
+   *
+   * 安全策略：密码修改后，所有 refresh token 立即失效，
+   * 防止泄露的 token 在密码修改后仍可使用。
+   */
+  async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void> {
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      select: { id: true, password: true, status: true },
+    })
+
+    if (!user) {
+      throw new UnauthorizedException('用户不存在或已注销')
+    }
+    if (user.status === 0) {
+      throw new ForbiddenException('账号已被禁用')
+    }
+
+    // 验证旧密码
+    const isOldPasswordValid = await compare(oldPassword, user.password)
+    if (!isOldPasswordValid) {
+      throw new UnauthorizedException('旧密码错误')
+    }
+
+    // 更新密码
+    user.password = await hash(newPassword, 12)
+    await this.userRepo.save(user)
+
+    // 强制所有设备重新登录
+    await this.logoutAll(userId)
+  }
+
   /** 当前用户信息（access token 保护，重查 DB 使删除/禁用即时生效） */
   async getProfile(userId: string) {
     const user = await this.userRepo.findOne({ where: { id: userId } })

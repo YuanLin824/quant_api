@@ -218,6 +218,101 @@ Authorization: Bearer <access_token>
 
 ---
 
+## 修改密码
+
+修改当前用户密码，修改后所有设备需重新登录。
+
+**请求**
+
+```
+POST /api/auth/change-password
+Authorization: Bearer <access_token>
+```
+
+**限流**: 每小时最多 5 次
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**请求体**
+
+| 参数        | 类型   | 必填 | 说明                                                        |
+| ----------- | ------ | ---- | ----------------------------------------------------------- |
+| oldPassword | string | 是   | 旧密码                                                      |
+| newPassword | string | 是   | 新密码，8-64 位，必须包含大写字母、小写字母、数字和特殊字符 |
+
+**请求示例**
+
+```json
+{
+  "oldPassword": "OldPassword@123",
+  "newPassword": "NewPassword@456"
+}
+```
+
+**响应**
+
+```json
+{
+  "code": 200,
+  "message": "密码修改成功，请重新登录",
+  "data": null
+}
+```
+
+**安全说明**
+
+- 修改密码后，所有 refresh token 立即失效
+- 当前设备需要重新登录
+- 防止泄露的 token 在密码修改后仍可使用
+
+**错误响应**
+
+- `401` - 旧密码错误
+- `403` - 账号已被禁用
+
+---
+
+## 登出所有设备
+
+强制登出当前用户的所有设备，吊销所有 refresh token。
+
+**请求**
+
+```
+POST /api/auth/logout-all
+Authorization: Bearer <access_token>
+```
+
+**限流**: 不限流
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**响应**
+
+```json
+{
+  "code": 200,
+  "message": "已登出所有设备",
+  "data": null
+}
+```
+
+**使用场景**
+
+- 发现账号被盗用时，立即登出所有设备
+- 在公共设备上忘记登出时，远程强制登出
+- 安全审计后，强制所有设备重新登录
+
+---
+
 ## 默认管理员账户
 
 系统启动时会自动创建默认管理员账户：

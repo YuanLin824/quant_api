@@ -48,6 +48,22 @@ GET {{baseUrl}}/auth/profile
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
+### 修改密码
+POST {{baseUrl}}/auth/change-password
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "oldPassword": "Password@123",
+  "newPassword": "NewPassword@456"
+}
+
+
+### 登出所有设备
+POST {{baseUrl}}/auth/logout-all
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
 ### ========== Stock API 接口 ==========
 
 

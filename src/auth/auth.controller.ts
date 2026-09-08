@@ -4,6 +4,7 @@ import type { Request } from 'express'
 import requestIp from 'request-ip'
 import { AuthService } from './auth.service'
 import type { AuthenticatedRequest } from './auth.types'
+import { ChangePasswordDto } from './dto/change-password.dto'
 import { LoginDto } from './dto/login.dto'
 import { RefreshTokenDto } from './dto/refresh-token.dto'
 import { RegisterDto } from './dto/register.dto'
@@ -55,6 +56,22 @@ export class AuthController {
   async profile(@Req() req: AuthenticatedRequest) {
     const data = await this.authService.getProfile(req.user.sub)
     return { code: 200, message: '获取成功', data }
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 3600000 } }) // 每小时最多 5 次修改密码
+  async changePassword(@Req() req: AuthenticatedRequest, @Body() dto: ChangePasswordDto) {
+    await this.authService.changePassword(req.user.sub, dto.oldPassword, dto.newPassword)
+    return { code: 200, message: '密码修改成功，请重新登录', data: null }
+  }
+
+  @Post('logout-all')
+  @UseGuards(JwtAuthGuard)
+  @SkipThrottle() // 登出操作不限流
+  async logoutAll(@Req() req: AuthenticatedRequest) {
+    await this.authService.logoutAll(req.user.sub)
+    return { code: 200, message: '已登出所有设备', data: null }
   }
 
   /** 提取设备信息（IP 来源与全局过滤器/日志中间件一致） */
