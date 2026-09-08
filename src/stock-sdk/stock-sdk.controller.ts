@@ -7,12 +7,13 @@ import {
   GetAllQuotesParamsDto,
   GetAllQuotesQueryDto,
 } from './dto/batch-quotes.dto'
+import { GetKlineParamsDto, GetKlineQueryDto, GetMinuteKlineQueryDto } from './dto/get-kline.dto'
 import { StockSdkService } from './stock-sdk.service'
 
 /**
  * Stock SDK 控制器
  *
- * 提供股票行情、基金净值和搜索功能。
+ * 提供股票行情、K线数据、基金净值和搜索功能。
  * 所有接口需要 JWT 认证，不限流。
  */
 @Controller('stock-sdk')
@@ -72,6 +73,40 @@ export class StockSdkController {
   @Post('batch')
   async batchByCodes(@Body() dto: BatchByCodesDto) {
     const data = await this.stockSdkService.batchByCodes(dto.codes, dto.batchSize, dto.concurrency)
+    return { code: 200, message: '获取成功', data }
+  }
+
+  /**
+   * 获取历史K线数据
+   * GET /api/stock-sdk/kline/:market/:code?period=daily&adjust=qfq
+   */
+  @Get('kline/:market/:code')
+  async getKline(@Param() params: GetKlineParamsDto, @Query() query: GetKlineQueryDto) {
+    const data = await this.stockSdkService.getKline(
+      params.market,
+      params.code,
+      query.period,
+      query.adjust,
+      query.startDate,
+      query.endDate
+    )
+    return { code: 200, message: '获取成功', data }
+  }
+
+  /**
+   * 获取分钟K线数据
+   * GET /api/stock-sdk/kline/:market/:code/minute?period=5&adjust=qfq
+   */
+  @Get('kline/:market/:code/minute')
+  async getMinuteKline(@Param() params: GetKlineParamsDto, @Query() query: GetMinuteKlineQueryDto) {
+    const data = await this.stockSdkService.getMinuteKline(
+      params.market,
+      params.code,
+      query.period,
+      query.adjust,
+      query.startDate,
+      query.endDate
+    )
     return { code: 200, message: '获取成功', data }
   }
 }

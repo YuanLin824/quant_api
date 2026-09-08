@@ -466,3 +466,117 @@ curl -X POST http://localhost:3001/api/stock-sdk/batch \
   -H "Content-Type: application/json" \
   -d '{"codes": ["sh600519", "sz000651", "hk00700", "usAAPL"]}'
 ```
+
+---
+
+## 获取历史K线数据
+
+获取指定股票的历史K线数据。
+
+**请求**
+
+```
+GET /api/stock-sdk/kline/:market/:code
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**路径参数**
+
+| 参数   | 类型   | 必填 | 说明                                          |
+| ------ | ------ | ---- | --------------------------------------------- |
+| market | string | 是   | 市场类型: `cn`(A股) / `hk`(港股) / `us`(美股) |
+| code   | string | 是   | 股票代码                                      |
+
+**查询参数**
+
+| 参数      | 类型   | 必填 | 说明                                                                   |
+| --------- | ------ | ---- | ---------------------------------------------------------------------- |
+| period    | string | 否   | K线周期: `daily`(日K) / `weekly`(周K) / `monthly`(月K)，默认 `daily`   |
+| adjust    | string | 否   | 复权类型: `qfq`(前复权) / `hfq`(后复权) / 空字符串(不复权)，默认 `qfq` |
+| startDate | string | 否   | 开始日期 (YYYYMMDD)                                                    |
+| endDate   | string | 否   | 结束日期 (YYYYMMDD)                                                    |
+
+**响应**
+
+返回 stock-sdk 原始格式的 K 线数组。
+
+**示例**
+
+```bash
+# 获取A股日K线
+curl http://localhost:3001/api/stock-sdk/kline/cn/600519 \
+  -H "Authorization: Bearer <access_token>"
+
+# 获取港股周K线
+curl http://localhost:3001/api/stock-sdk/kline/hk/00700?period=weekly \
+  -H "Authorization: Bearer <access_token>"
+
+# 获取美股月K线
+curl http://localhost:3001/api/stock-sdk/kline/us/AAPL?period=monthly \
+  -H "Authorization: Bearer <access_token>"
+
+# 获取指定日期范围的K线
+curl http://localhost:3001/api/stock-sdk/kline/cn/600519?startDate=20240101&endDate=20240131 \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## 获取分钟K线数据
+
+获取指定股票的分钟K线数据。
+
+**请求**
+
+```
+GET /api/stock-sdk/kline/:market/:code/minute
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**路径参数**
+
+| 参数   | 类型   | 必填 | 说明                                          |
+| ------ | ------ | ---- | --------------------------------------------- |
+| market | string | 是   | 市场类型: `cn`(A股) / `hk`(港股) / `us`(美股) |
+| code   | string | 是   | 股票代码                                      |
+
+**查询参数**
+
+| 参数      | 类型   | 必填 | 说明                                                                   |
+| --------- | ------ | ---- | ---------------------------------------------------------------------- |
+| period    | string | 否   | 分钟K线周期: `1` / `5` / `15` / `30` / `60`，默认 `1`                  |
+| adjust    | string | 否   | 复权类型: `qfq`(前复权) / `hfq`(后复权) / 空字符串(不复权)，默认 `qfq` |
+| startDate | string | 否   | 开始日期                                                               |
+| endDate   | string | 否   | 结束日期                                                               |
+
+**响应**
+
+返回 stock-sdk 原始格式的分钟 K 线数组。
+
+**示例**
+
+```bash
+# 获取A股5分钟K线
+curl http://localhost:3001/api/stock-sdk/kline/cn/600519/minute?period=5 \
+  -H "Authorization: Bearer <access_token>"
+
+# 获取港股15分钟K线
+curl http://localhost:3001/api/stock-sdk/kline/hk/00700/minute?period=15 \
+  -H "Authorization: Bearer <access_token>"
+
+# 获取美股60分钟K线
+curl http://localhost:3001/api/stock-sdk/kline/us/AAPL/minute?period=60 \
+  -H "Authorization: Bearer <access_token>"
+```

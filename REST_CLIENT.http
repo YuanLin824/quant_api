@@ -214,3 +214,36 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
     "usAAPL"
   ]
 }
+
+
+### ========== Stock SDK K线接口 ==========
+
+
+### Stock SDK - 获取A股日K线
+GET {{baseUrl}}/stock-sdk/kline/cn/600519
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取港股周K线
+GET {{baseUrl}}/stock-sdk/kline/hk/00700?period=weekly
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取美股月K线
+GET {{baseUrl}}/stock-sdk/kline/us/AAPL?period=monthly
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取A股5分钟K线
+GET {{baseUrl}}/stock-sdk/kline/cn/600519/minute?period=5
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取港股15分钟K线
+GET {{baseUrl}}/stock-sdk/kline/hk/00700/minute?period=15
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取美股60分钟K线
+GET {{baseUrl}}/stock-sdk/kline/us/AAPL/minute?period=60
+Authorization: Bearer {{login.response.body.data.accessToken}}

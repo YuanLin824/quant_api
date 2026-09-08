@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import type { FundQuote, SearchResult } from 'stock-sdk'
 import { StockSDK } from 'stock-sdk'
+import { AdjustType, KlinePeriod, MinuteKlinePeriod } from './dto/get-kline.dto'
 import { Market } from './stock-sdk.types'
 
 /**
@@ -15,7 +16,7 @@ export class StockSdkService {
   private readonly sdk: StockSDK
 
   constructor() {
-    this.sdk = new StockSDK()
+    this.sdk = new StockSDK({ rateLimit: { requestsPerSecond: 3, maxBurst: 5 } })
   }
 
   /**
@@ -99,5 +100,81 @@ export class StockSdkService {
     }
 
     return this.sdk.batch.byCodes(codes, options)
+  }
+
+  /**
+   * 获取历史K线数据
+   * @param market 市场类型 (cn/hk/us)
+   * @param code 股票代码
+   * @param period K线周期 (daily/weekly/monthly)
+   * @param adjust 复权类型 (qfq/hfq/空字符串)
+   * @param startDate 开始日期 (YYYYMMDD)
+   * @param endDate 结束日期 (YYYYMMDD)
+   */
+  async getKline(
+    market: Market,
+    code: string,
+    period?: KlinePeriod,
+    adjust?: AdjustType,
+    startDate?: string,
+    endDate?: string
+  ) {
+    this.logger.log(`获取K线数据: ${market}/${code}, 周期: ${period}`)
+
+    // 构建选项，只添加有值的参数
+    const options: any = {}
+    if (period) options.period = period
+    if (adjust !== undefined && adjust !== null) options.adjust = adjust
+    if (startDate) options.startDate = startDate
+    if (endDate) options.endDate = endDate
+
+    switch (market) {
+      case Market.CN:
+        return this.sdk.kline.cn(code, options)
+      case Market.HK:
+        return this.sdk.kline.hk(code, options)
+      case Market.US:
+        return this.sdk.kline.us(code, options)
+      default:
+        return []
+    }
+  }
+
+  /**
+   * 获取分钟K线数据
+   * @param market 市场类型 (cn/hk/us)
+   * @param code 股票代码
+   * @param period 分钟K线周期 (1/5/15/30/60)
+   * @param adjust 复权类型 (qfq/hfq/空字符串)
+   * @param startDate 开始日期
+   * @param endDate 结束日期
+   */
+  async getMinuteKline(
+    market: Market,
+    code: string,
+    period?: MinuteKlinePeriod,
+    adjust?: AdjustType,
+    startDate?: string,
+    endDate?: string
+  ) {
+    this.logger.log(`获取分钟K线数据: ${market}/${code}, 周期: ${period}分钟`)
+
+    // 构建选项，只添加有值的参数
+    const options: any = {}
+    if (period) options.period = period
+    if (adjust !== undefined && adjust !== null) options.adjust = adjust
+    if (startDate) options.startDate = startDate
+    if (endDate) options.endDate = endDate
+
+    switch (market) {
+      case Market.CN:
+        return this.sdk.kline.cnMinute(code, options)
+      case Market.HK:
+        return this.sdk.kline.hkMinute(code, options)
+      case Market.US:
+        return this.sdk.kline.usMinute(code, options)
+      default:
+        return []
+    }
   }
 }
