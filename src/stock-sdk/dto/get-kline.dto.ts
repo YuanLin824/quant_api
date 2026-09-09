@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer'
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator'
+import { IsEnum, IsIn, IsNotEmpty, IsObject, IsOptional, IsString, Matches } from 'class-validator'
+import type { IndicatorOptions } from 'stock-sdk'
 import { Market } from '../stock-sdk.types'
 
 /** K线周期 */
@@ -36,6 +37,12 @@ export enum AdjustType {
   NONE = '',
 }
 
+/** K线周期枚举值集合（历史K线 + 分钟K线） */
+export const KLINE_PERIODS = [...Object.values(KlinePeriod), ...Object.values(MinuteKlinePeriod)]
+
+/** 日期格式正则：YYYYMMDD 或 YYYY-MM-DD */
+export const DATE_PATTERN = /^\d{4}-?\d{2}-?\d{2}$/
+
 /** 获取K线数据路径参数 DTO */
 export class GetKlineParamsDto {
   @Transform(({ value }) => value?.toLowerCase())
@@ -47,40 +54,37 @@ export class GetKlineParamsDto {
   code!: string
 }
 
-/** 获取历史K线查询参数 DTO */
+/** 获取K线数据查询参数 DTO */
 export class GetKlineQueryDto {
   @IsOptional()
-  @IsEnum(KlinePeriod, { message: 'K线周期必须是 daily/weekly/monthly' })
-  period?: KlinePeriod
+  @IsIn(KLINE_PERIODS, {
+    message: 'K线周期必须是 daily/weekly/monthly 或 1/5/15/30/60',
+  })
+  period?: string
 
   @IsOptional()
   @IsEnum(AdjustType, { message: '复权类型必须是 qfq/hfq/空字符串' })
   adjust?: AdjustType
 
   @IsOptional()
-  @IsString({ message: '开始日期必须是字符串' })
+  @Matches(DATE_PATTERN, { message: '开始日期必须是 YYYYMMDD 或 YYYY-MM-DD 格式' })
   startDate?: string
 
   @IsOptional()
-  @IsString({ message: '结束日期必须是字符串' })
+  @Matches(DATE_PATTERN, { message: '结束日期必须是 YYYYMMDD 或 YYYY-MM-DD 格式' })
   endDate?: string
-}
-
-/** 获取分钟K线查询参数 DTO */
-export class GetMinuteKlineQueryDto {
-  @IsOptional()
-  @IsEnum(MinuteKlinePeriod, { message: '分钟K线周期必须是 1/5/15/30/60' })
-  period?: MinuteKlinePeriod
 
   @IsOptional()
-  @IsEnum(AdjustType, { message: '复权类型必须是 qfq/hfq/空字符串' })
-  adjust?: AdjustType
-
-  @IsOptional()
-  @IsString({ message: '开始日期必须是字符串' })
-  startDate?: string
-
-  @IsOptional()
-  @IsString({ message: '结束日期必须是字符串' })
-  endDate?: string
+  @IsObject({ message: 'indicators 必须是对象' })
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value)
+      } catch {
+        return {}
+      }
+    }
+    return value ?? {}
+  })
+  indicators?: IndicatorOptions
 }

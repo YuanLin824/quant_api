@@ -1,8 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common'
 import type { FundQuote, SearchResult } from 'stock-sdk'
 import { StockSDK } from 'stock-sdk'
-import { AdjustType, KlinePeriod, MinuteKlinePeriod } from './dto/get-kline.dto'
-import { CodesMarket, Market } from './stock-sdk.types'
+import {
+  CodesMarket,
+  KlineRequestOptions,
+  KlineSignalsRequestOptions,
+  Market,
+} from './stock-sdk.types'
 
 /** K 线信号（与 stock-sdk KlineSignal 结构一致） */
 export interface KlineSignal {
@@ -147,92 +151,16 @@ export class StockSdkService {
   }
 
   /**
-   * 获取历史K线数据
+   * 获取K线数据（历史K线/分钟K线/带指标K线）
    * @param market 市场类型 (cn/hk/us)
    * @param code 股票代码
-   * @param period K线周期 (daily/weekly/monthly)
+   * @param period K线周期 (daily/weekly/monthly 或 1/5/15/30/60)
    * @param adjust 复权类型 (qfq/hfq/空字符串)
    * @param startDate 开始日期 (YYYYMMDD)
    * @param endDate 结束日期 (YYYYMMDD)
+   * @param indicators 指标配置（传入时调用 withIndicators）
    */
   async getKline(
-    market: Market,
-    code: string,
-    period?: KlinePeriod,
-    adjust?: AdjustType,
-    startDate?: string,
-    endDate?: string
-  ) {
-    this.logger.log(`获取K线数据: ${market}/${code}, 周期: ${period}`)
-
-    // 构建选项，只添加有值的参数
-    const options: any = {}
-    if (period) options.period = period
-    if (adjust !== undefined && adjust !== null) options.adjust = adjust
-    if (startDate) options.startDate = startDate
-    if (endDate) options.endDate = endDate
-
-    switch (market) {
-      case Market.CN:
-        return this.sdk.kline.cn(code, options)
-      case Market.HK:
-        return this.sdk.kline.hk(code, options)
-      case Market.US:
-        return this.sdk.kline.us(code, options)
-      default:
-        return []
-    }
-  }
-
-  /**
-   * 获取分钟K线数据
-   * @param market 市场类型 (cn/hk/us)
-   * @param code 股票代码
-   * @param period 分钟K线周期 (1/5/15/30/60)
-   * @param adjust 复权类型 (qfq/hfq/空字符串)
-   * @param startDate 开始日期
-   * @param endDate 结束日期
-   */
-  async getMinuteKline(
-    market: Market,
-    code: string,
-    period?: MinuteKlinePeriod,
-    adjust?: AdjustType,
-    startDate?: string,
-    endDate?: string
-  ) {
-    this.logger.log(`获取分钟K线数据: ${market}/${code}, 周期: ${period}分钟`)
-
-    // 构建选项，只添加有值的参数
-    const options: any = {}
-    if (period) options.period = period
-    if (adjust !== undefined && adjust !== null) options.adjust = adjust
-    if (startDate) options.startDate = startDate
-    if (endDate) options.endDate = endDate
-
-    switch (market) {
-      case Market.CN:
-        return this.sdk.kline.cnMinute(code, options)
-      case Market.HK:
-        return this.sdk.kline.hkMinute(code, options)
-      case Market.US:
-        return this.sdk.kline.usMinute(code, options)
-      default:
-        return []
-    }
-  }
-
-  /**
-   * 获取带技术指标的K线数据
-   * @param market 市场类型 (cn/hk/us)
-   * @param code 股票代码
-   * @param period K线周期 (daily/weekly/monthly)
-   * @param adjust 复权类型 (qfq/hfq/空字符串)
-   * @param startDate 开始日期 (YYYYMMDD 或 YYYY-MM-DD)
-   * @param endDate 结束日期 (YYYYMMDD 或 YYYY-MM-DD)
-   * @param indicators 指标配置
-   */
-  async getKlineWithIndicators(
     market: Market,
     code: string,
     period?: string,
@@ -241,27 +169,57 @@ export class StockSdkService {
     endDate?: string,
     indicators?: Record<string, any>
   ) {
-    this.logger.log(`获取带指标K线数据: ${market}/${code}, 周期: ${period}`)
+    this.logger.log(`获取K线数据: ${market}/${code}, 周期: ${period}`)
 
     // 构建选项，只添加有值的参数
-    const options: any = {}
+    const options: KlineRequestOptions = {}
     if (period) options.period = period
     if (adjust !== undefined && adjust !== null) options.adjust = adjust
     if (startDate) options.startDate = startDate
     if (endDate) options.endDate = endDate
-    if (indicators) options.indicators = indicators
 
-    // 通过 options 传递 market
+    // 分钟周期集合：period 为 1/5/15/30/60 时调用分钟K线接口
+    // withIndicators 仅支持 daily/weekly/monthly，分钟周期不传指标
+    const isMinutePeriod = ['1', '5', '15', '30', '60'].includes(period ?? '')
+
     const marketMap: Record<string, string> = {
-      cn: 'A',
-      hk: 'HK',
-      us: 'US',
-    }
-    if (market && marketMap[market]) {
-      options.market = marketMap[market]
+      [Market.CN]: 'A',
+      [Market.HK]: 'HK',
+      [Market.US]: 'US',
     }
 
-    return this.sdk.kline.withIndicators(code, options)
+    // 分钟周期：始终调用分钟K线接口（不支持指标）
+    if (isMinutePeriod) {
+      switch (market) {
+        case Market.CN:
+          return this.sdk.kline.cnMinute(code, options as any)
+        case Market.HK:
+          return this.sdk.kline.hkMinute(code, options as any)
+        case Market.US:
+          return this.sdk.kline.usMinute(code, options as any)
+        default:
+          return []
+      }
+    }
+
+    // 有 indicators 时调用 withIndicators（仅支持 daily/weekly/monthly）
+    if (indicators && Object.keys(indicators).length > 0) {
+      options.indicators = indicators
+      if (marketMap[market]) options.market = marketMap[market] as 'A' | 'HK' | 'US'
+      return this.sdk.kline.withIndicators(code, options as any)
+    }
+
+    // 历史K线
+    switch (market) {
+      case Market.CN:
+        return this.sdk.kline.cn(code, options as any)
+      case Market.HK:
+        return this.sdk.kline.hk(code, options as any)
+      case Market.US:
+        return this.sdk.kline.us(code, options as any)
+      default:
+        return []
+    }
   }
 
   /**
@@ -289,7 +247,7 @@ export class StockSdkService {
     maSlow?: number
   ): Promise<KlineSignal[]> {
     // 构建选项，只添加有值的参数
-    const options: any = {}
+    const options: KlineSignalsRequestOptions = {}
     if (period) options.period = period
     if (adjust !== undefined && adjust !== null) options.adjust = adjust
     if (startDate) options.startDate = startDate
@@ -304,9 +262,9 @@ export class StockSdkService {
       us: 'US',
     }
     if (market && marketMap[market]) {
-      options.market = marketMap[market]
+      options.market = marketMap[market] as 'A' | 'HK' | 'US'
     }
 
-    return this.sdk.kline.signals(code, options)
+    return this.sdk.kline.signals(code, options as any)
   }
 }

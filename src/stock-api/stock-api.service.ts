@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { stocks } from 'stock-api'
-import { KlinePeriod, Market } from './stock-api.types'
+import { Kline, KlinePeriod, Market, Stock } from './stock-api.types'
 
 /**
  * 股票行情服务
@@ -17,7 +17,7 @@ export class StockApiService {
    * @param market 市场类型 (SH/SZ/HK/US)
    * @param code 股票代码
    */
-  async getStock(market: Market, code: string): Promise<any> {
+  async getStock(market: Market, code: string): Promise<Stock> {
     const fullCode = `${market}${code}`
     this.logger.log(`获取股票行情: ${fullCode}`)
 
@@ -28,7 +28,7 @@ export class StockApiService {
    * 批量获取股票行情
    * @param codes 完整股票代码数组 (如 ["SH600519", "SZ000651"])
    */
-  async getStocks(codes: string[]): Promise<any[]> {
+  async getStocks(codes: string[]): Promise<Stock[]> {
     this.logger.log(`批量获取股票行情: ${codes.join(', ')}`)
 
     return stocks.auto.getStocks(codes)
@@ -46,7 +46,7 @@ export class StockApiService {
     code: string,
     period: KlinePeriod = KlinePeriod.DAY,
     count: number = 120
-  ): Promise<any[]> {
+  ): Promise<Kline[]> {
     const fullCode = `${market}${code}`
     this.logger.log(`获取K线数据: ${fullCode}, 周期: ${period}, 数量: ${count}`)
 
@@ -60,7 +60,7 @@ export class StockApiService {
    * 搜索股票
    * @param keyword 搜索关键词
    */
-  async searchStocks(keyword: string): Promise<any[]> {
+  async searchStocks(keyword: string): Promise<Stock[]> {
     this.logger.log(`搜索股票: ${keyword}`)
 
     return stocks.auto.searchStocks(keyword)

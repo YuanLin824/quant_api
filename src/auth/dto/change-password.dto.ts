@@ -1,9 +1,9 @@
-import { IsString, Length, Matches } from 'class-validator'
+import { IsNotEmpty, IsString, Length, Matches } from 'class-validator'
 
 /** 修改密码请求体 */
 export class ChangePasswordDto {
   @IsString({ message: '旧密码必须是字符串' })
-  @IsString({ message: '旧密码不能为空' })
+  @IsNotEmpty({ message: '旧密码不能为空' })
   oldPassword!: string
 
   @IsString({ message: '新密码必须是字符串' })

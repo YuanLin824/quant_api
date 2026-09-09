@@ -1,6 +1,19 @@
 import { Transform, Type } from 'class-transformer'
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator'
+import {
+  IsEnum,
+  IsIn,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Matches,
+  Min,
+} from 'class-validator'
 import { Market } from '../stock-sdk.types'
+import { AdjustType, DATE_PATTERN, KlinePeriod } from './get-kline.dto'
+
+/** K线周期枚举值集合（仅历史周期） */
+const SIGNAL_PERIODS = Object.values(KlinePeriod)
 
 /** 获取K线信号路径参数 DTO */
 export class GetKlineSignalsParamsDto {
@@ -16,19 +29,21 @@ export class GetKlineSignalsParamsDto {
 /** 获取K线信号查询参数 DTO */
 export class GetKlineSignalsQueryDto {
   @IsOptional()
-  @IsString({ message: 'K线周期必须是字符串' })
+  @IsIn(SIGNAL_PERIODS, {
+    message: 'K线周期必须是 daily/weekly/monthly',
+  })
   period?: string
 
   @IsOptional()
-  @IsString({ message: '复权类型必须是字符串' })
-  adjust?: string
+  @IsEnum(AdjustType, { message: '复权类型必须是 qfq/hfq/空字符串' })
+  adjust?: AdjustType
 
   @IsOptional()
-  @IsString({ message: '开始日期必须是字符串' })
+  @Matches(DATE_PATTERN, { message: '开始日期必须是 YYYYMMDD 或 YYYY-MM-DD 格式' })
   startDate?: string
 
   @IsOptional()
-  @IsString({ message: '结束日期必须是字符串' })
+  @Matches(DATE_PATTERN, { message: '结束日期必须是 YYYYMMDD 或 YYYY-MM-DD 格式' })
   endDate?: string
 
   @IsOptional()

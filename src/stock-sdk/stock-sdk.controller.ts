@@ -9,11 +9,7 @@ import {
 } from './dto/batch-quotes.dto'
 import { GetCodesDto } from './dto/get-codes.dto'
 import { GetKlineSignalsParamsDto, GetKlineSignalsQueryDto } from './dto/get-kline-signals.dto'
-import {
-  GetKlineWithIndicatorsParamsDto,
-  GetKlineWithIndicatorsQueryDto,
-} from './dto/get-kline-with-indicators.dto'
-import { GetKlineParamsDto, GetKlineQueryDto, GetMinuteKlineQueryDto } from './dto/get-kline.dto'
+import { GetKlineParamsDto, GetKlineQueryDto } from './dto/get-kline.dto'
 import { GetLargeOrderDto } from './dto/get-large-order.dto'
 import { StockSdkService } from './stock-sdk.service'
 
@@ -104,49 +100,14 @@ export class StockSdkController {
   }
 
   /**
-   * 获取历史K线数据
+   * 获取K线数据（历史K线/分钟K线/带指标K线）
    * GET /api/stock-sdk/kline/:market/:code?period=daily&adjust=qfq
+   * GET /api/stock-sdk/kline/:market/:code?period=5
+   * GET /api/stock-sdk/kline/:market/:code?indicators={"ma":[5,10,20]}
    */
   @Get('kline/:market/:code')
   async getKline(@Param() params: GetKlineParamsDto, @Query() query: GetKlineQueryDto) {
     const data = await this.stockSdkService.getKline(
-      params.market,
-      params.code,
-      query.period,
-      query.adjust,
-      query.startDate,
-      query.endDate
-    )
-    return { code: 200, message: '获取成功', data }
-  }
-
-  /**
-   * 获取分钟K线数据
-   * GET /api/stock-sdk/kline/:market/:code/minute?period=5&adjust=qfq
-   */
-  @Get('kline/:market/:code/minute')
-  async getMinuteKline(@Param() params: GetKlineParamsDto, @Query() query: GetMinuteKlineQueryDto) {
-    const data = await this.stockSdkService.getMinuteKline(
-      params.market,
-      params.code,
-      query.period,
-      query.adjust,
-      query.startDate,
-      query.endDate
-    )
-    return { code: 200, message: '获取成功', data }
-  }
-
-  /**
-   * 获取带技术指标的K线数据
-   * GET /api/stock-sdk/kline/:market/:code/indicators?period=daily&indicators={"ma":[5,10,20]}
-   */
-  @Get('kline/:market/:code/indicators')
-  async getKlineWithIndicators(
-    @Param() params: GetKlineWithIndicatorsParamsDto,
-    @Query() query: GetKlineWithIndicatorsQueryDto
-  ) {
-    const data = await this.stockSdkService.getKlineWithIndicators(
       params.market,
       params.code,
       query.period,
