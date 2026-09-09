@@ -217,8 +217,6 @@ export class StockSdkService {
       options.market = marketMap[market]
     }
 
-    this.logger.log(options)
-
     return this.sdk.kline.withIndicators(code, options)
   }
 }
