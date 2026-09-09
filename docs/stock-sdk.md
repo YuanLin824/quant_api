@@ -580,3 +580,90 @@ curl http://localhost:3001/api/stock-sdk/kline/hk/00700/minute?period=15 \
 curl http://localhost:3001/api/stock-sdk/kline/us/AAPL/minute?period=60 \
   -H "Authorization: Bearer <access_token>"
 ```
+
+---
+
+## 获取带技术指标的K线数据
+
+获取指定股票的K线数据，并附加技术指标计算结果。
+
+**请求**
+
+```
+GET /api/stock-sdk/kline/:market/:code/indicators
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**路径参数**
+
+| 参数   | 类型   | 必填 | 说明                                          |
+| ------ | ------ | ---- | --------------------------------------------- |
+| market | string | 是   | 市场类型: `cn`(A股) / `hk`(港股) / `us`(美股) |
+| code   | string | 是   | 股票代码                                      |
+
+**查询参数**
+
+| 参数       | 类型   | 必填 | 说明                                                                   |
+| ---------- | ------ | ---- | ---------------------------------------------------------------------- |
+| period     | string | 否   | K线周期: `daily`(日K) / `weekly`(周K) / `monthly`(月K)，默认 `daily`   |
+| adjust     | string | 否   | 复权类型: `qfq`(前复权) / `hfq`(后复权) / 空字符串(不复权)，默认 `qfq` |
+| startDate  | string | 否   | 开始日期 (YYYYMMDD 或 YYYY-MM-DD)                                      |
+| endDate    | string | 否   | 结束日期 (YYYYMMDD 或 YYYY-MM-DD)                                      |
+| indicators | object | 否   | 指标配置 JSON 对象                                                     |
+
+**indicators 指标配置**
+
+| 指标 | 类型     | 说明                              |
+| ---- | -------- | --------------------------------- |
+| ma   | number[] | MA 均线周期数组，如 `[5, 10, 20]` |
+| macd | boolean  | 是否启用 MACD                     |
+| boll | boolean  | 是否启用布林带                    |
+| kdj  | boolean  | 是否启用 KDJ                      |
+| rsi  | boolean  | 是否启用 RSI                      |
+| wr   | boolean  | 是否启用威廉指标                  |
+| bias | boolean  | 是否启用乖离率                    |
+| cci  | boolean  | 是否启用 CCI                      |
+| atr  | boolean  | 是否启用 ATR                      |
+| obv  | boolean  | 是否启用 OBV                      |
+| roc  | boolean  | 是否启用 ROC                      |
+| dmi  | boolean  | 是否启用 DMI                      |
+| sar  | boolean  | 是否启用 SAR                      |
+| kc   | boolean  | 是否启用 KC                       |
+
+**响应**
+
+返回 stock-sdk 原始格式的带指标 K 线数组。
+
+**示例**
+
+```bash
+# 获取带 MA 均线的K线
+curl "http://localhost:3001/api/stock-sdk/kline/cn/600519/indicators?period=daily&indicators=%7B%22ma%22%3A%5B5%2C10%2C20%5D%7D" \
+  -H "Authorization: Bearer <access_token>"
+
+# 获取带 MACD 和 KDJ 的K线
+curl "http://localhost:3001/api/stock-sdk/kline/cn/600519/indicators?indicators=%7B%22macd%22%3Atrue%2C%22kdj%22%3Atrue%7D" \
+  -H "Authorization: Bearer <access_token>"
+
+# 获取带多个指标的K线
+curl "http://localhost:3001/api/stock-sdk/kline/cn/600519/indicators?indicators=%7B%22ma%22%3A%5B5%2C10%2C20%5D%2C%22macd%22%3Atrue%2C%22boll%22%3Atrue%2C%22rsi%22%3Atrue%7D" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**indicators JSON 示例**
+
+```json
+{
+  "ma": [5, 10, 20],
+  "macd": true,
+  "boll": true,
+  "kdj": true,
+  "rsi": true
+}
+```

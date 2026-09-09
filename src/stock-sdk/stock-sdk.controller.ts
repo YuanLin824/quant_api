@@ -7,6 +7,10 @@ import {
   GetAllQuotesParamsDto,
   GetAllQuotesQueryDto,
 } from './dto/batch-quotes.dto'
+import {
+  GetKlineWithIndicatorsParamsDto,
+  GetKlineWithIndicatorsQueryDto,
+} from './dto/get-kline-with-indicators.dto'
 import { GetKlineParamsDto, GetKlineQueryDto, GetMinuteKlineQueryDto } from './dto/get-kline.dto'
 import { StockSdkService } from './stock-sdk.service'
 
@@ -106,6 +110,27 @@ export class StockSdkController {
       query.adjust,
       query.startDate,
       query.endDate
+    )
+    return { code: 200, message: '获取成功', data }
+  }
+
+  /**
+   * 获取带技术指标的K线数据
+   * GET /api/stock-sdk/kline/:market/:code/indicators?period=daily&indicators={"ma":[5,10,20],"macd":true}
+   */
+  @Get('kline/:market/:code/indicators')
+  async getKlineWithIndicators(
+    @Param() params: GetKlineWithIndicatorsParamsDto,
+    @Query() query: GetKlineWithIndicatorsQueryDto
+  ) {
+    const data = await this.stockSdkService.getKlineWithIndicators(
+      params.market,
+      params.code,
+      query.period,
+      query.adjust,
+      query.startDate,
+      query.endDate,
+      query.indicators
     )
     return { code: 200, message: '获取成功', data }
   }

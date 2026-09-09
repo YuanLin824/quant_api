@@ -247,3 +247,21 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 ### Stock SDK - 获取美股60分钟K线
 GET {{baseUrl}}/stock-sdk/kline/us/AAPL/minute?period=60
 Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### ========== Stock SDK 带指标K线接口 ==========
+
+
+### Stock SDK - 获取带MA均线的K线
+GET {{baseUrl}}/stock-sdk/kline/cn/600519/indicators?period=daily&indicators={"ma":[5,10,20]}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取带MACD的K线
+GET {{baseUrl}}/stock-sdk/kline/cn/600519/indicators?indicators={"macd":true}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取带多个指标的K线
+GET {{baseUrl}}/stock-sdk/kline/cn/600519/indicators?indicators={"ma":[5,10,20],"macd":true,"boll":true,"rsi":true}
+Authorization: Bearer {{login.response.body.data.accessToken}}

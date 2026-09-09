@@ -177,4 +177,48 @@ export class StockSdkService {
         return []
     }
   }
+
+  /**
+   * 获取带技术指标的K线数据
+   * @param market 市场类型 (cn/hk/us)
+   * @param code 股票代码
+   * @param period K线周期 (daily/weekly/monthly)
+   * @param adjust 复权类型 (qfq/hfq/空字符串)
+   * @param startDate 开始日期 (YYYYMMDD 或 YYYY-MM-DD)
+   * @param endDate 结束日期 (YYYYMMDD 或 YYYY-MM-DD)
+   * @param indicators 指标配置
+   */
+  async getKlineWithIndicators(
+    market: Market,
+    code: string,
+    period?: string,
+    adjust?: string,
+    startDate?: string,
+    endDate?: string,
+    indicators?: Record<string, any>
+  ) {
+    this.logger.log(`获取带指标K线数据: ${market}/${code}, 周期: ${period}`)
+
+    // 构建选项，只添加有值的参数
+    const options: any = {}
+    if (period) options.period = period
+    if (adjust !== undefined && adjust !== null) options.adjust = adjust
+    if (startDate) options.startDate = startDate
+    if (endDate) options.endDate = endDate
+    if (indicators) options.indicators = indicators
+
+    // 通过 options 传递 market
+    const marketMap: Record<string, string> = {
+      cn: 'A',
+      hk: 'HK',
+      us: 'US',
+    }
+    if (market && marketMap[market]) {
+      options.market = marketMap[market]
+    }
+
+    this.logger.log(options)
+
+    return this.sdk.kline.withIndicators(code, options)
+  }
 }
