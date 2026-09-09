@@ -2,7 +2,21 @@ import { Injectable, Logger } from '@nestjs/common'
 import type { FundQuote, SearchResult } from 'stock-sdk'
 import { StockSDK } from 'stock-sdk'
 import { AdjustType, KlinePeriod, MinuteKlinePeriod } from './dto/get-kline.dto'
-import { Market } from './stock-sdk.types'
+import { CodesMarket, Market } from './stock-sdk.types'
+
+/** K 线信号（与 stock-sdk KlineSignal 结构一致） */
+export interface KlineSignal {
+  /** 信号类型（MA/MACD/KDJ 金叉死叉、KDJ/RSI 超买超卖、BOLL 突破、SAR 反转） */
+  type: string
+  /** 信号发生日期 */
+  date: string
+  /** 信号发生时间戳（毫秒） */
+  timestamp: number
+  /** 信号发生时收盘价 */
+  close: number | null
+  /** 附加信息 */
+  detail?: Record<string, number>
+}
 
 /**
  * Stock SDK 服务
@@ -47,6 +61,36 @@ export class StockSdkService {
     this.logger.log(`获取基金行情: ${codes.join(',')}`)
 
     return this.sdk.quotes.fund(codes)
+  }
+
+  /**
+   * 获取大单数据
+   * @param codes 股票代码数组
+   * @returns 大单成交数据（主力资金流向）
+   */
+  async getLargeOrder(codes: string[]) {
+    this.logger.log(`获取大单数据: ${codes.join(',')}`)
+    return this.sdk.quotes.largeOrder(codes)
+  }
+
+  /**
+   * 获取股票/基金代码列表
+   * @param market 市场类型 (cn/hk/us/fund)
+   * @returns 代码字符串数组
+   */
+  async getCodes(market: CodesMarket) {
+    switch (market) {
+      case CodesMarket.CN:
+        return this.sdk.codes.cn()
+      case CodesMarket.HK:
+        return this.sdk.codes.hk()
+      case CodesMarket.US:
+        return this.sdk.codes.us()
+      case CodesMarket.FUND:
+        return this.sdk.codes.fund()
+      default:
+        return []
+    }
   }
 
   /**
@@ -218,5 +262,51 @@ export class StockSdkService {
     }
 
     return this.sdk.kline.withIndicators(code, options)
+  }
+
+  /**
+   * 获取K线技术分析信号
+   * 识别金叉/死叉、超买/超卖等技术信号
+   *
+   * @param market 市场类型 (cn/hk/us)
+   * @param code 股票代码
+   * @param period K线周期 (daily/weekly/monthly)
+   * @param adjust 复权类型 (qfq/hfq/空字符串)
+   * @param startDate 开始日期 (YYYYMMDD 或 YYYY-MM-DD)
+   * @param endDate 结束日期 (YYYYMMDD 或 YYYY-MM-DD)
+   * @param maFast MA 快线周期（默认 5）
+   * @param maSlow MA 慢线周期（默认 20）
+   * @returns K线信号数组，包含信号类型、日期、收盘价等信息
+   */
+  async getKlineSignals(
+    market: Market,
+    code: string,
+    period?: string,
+    adjust?: string,
+    startDate?: string,
+    endDate?: string,
+    maFast?: number,
+    maSlow?: number
+  ): Promise<KlineSignal[]> {
+    // 构建选项，只添加有值的参数
+    const options: any = {}
+    if (period) options.period = period
+    if (adjust !== undefined && adjust !== null) options.adjust = adjust
+    if (startDate) options.startDate = startDate
+    if (endDate) options.endDate = endDate
+    if (maFast) options.maFast = maFast
+    if (maSlow) options.maSlow = maSlow
+
+    // 通过 options 传递 market
+    const marketMap: Record<string, string> = {
+      cn: 'A',
+      hk: 'HK',
+      us: 'US',
+    }
+    if (market && marketMap[market]) {
+      options.market = marketMap[market]
+    }
+
+    return this.sdk.kline.signals(code, options)
   }
 }

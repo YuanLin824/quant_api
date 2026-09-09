@@ -265,3 +265,44 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 ### Stock SDK - 获取带多个指标的K线
 GET {{baseUrl}}/stock-sdk/kline/cn/600519/indicators?indicators={"ma":[5,10,20],"macd":true,"boll":true,"rsi":true}
 Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### ========== Stock SDK 其他接口 ==========
+
+
+### Stock SDK - 获取大单数据
+POST {{baseUrl}}/stock-sdk/large-order
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "codes": [
+    "600519",
+    "000651"
+  ]
+}
+
+
+### Stock SDK - 获取A股代码列表
+GET {{baseUrl}}/stock-sdk/codes/cn
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取港股代码列表
+GET {{baseUrl}}/stock-sdk/codes/hk
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取美股代码列表
+GET {{baseUrl}}/stock-sdk/codes/us
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取基金代码列表
+GET {{baseUrl}}/stock-sdk/codes/fund
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取K线信号
+GET {{baseUrl}}/stock-sdk/kline/cn/600519/signals?period=daily&maFast=5&maSlow=20
+Authorization: Bearer {{login.response.body.data.accessToken}}

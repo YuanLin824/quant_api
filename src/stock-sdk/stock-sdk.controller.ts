@@ -7,11 +7,14 @@ import {
   GetAllQuotesParamsDto,
   GetAllQuotesQueryDto,
 } from './dto/batch-quotes.dto'
+import { GetCodesDto } from './dto/get-codes.dto'
+import { GetKlineSignalsParamsDto, GetKlineSignalsQueryDto } from './dto/get-kline-signals.dto'
 import {
   GetKlineWithIndicatorsParamsDto,
   GetKlineWithIndicatorsQueryDto,
 } from './dto/get-kline-with-indicators.dto'
 import { GetKlineParamsDto, GetKlineQueryDto, GetMinuteKlineQueryDto } from './dto/get-kline.dto'
+import { GetLargeOrderDto } from './dto/get-large-order.dto'
 import { StockSdkService } from './stock-sdk.service'
 
 /**
@@ -43,6 +46,26 @@ export class StockSdkController {
   @Post('funds')
   async getFundQuotes(@Body() dto: GetFundQuotesDto) {
     const data = await this.stockSdkService.getFundQuotes(dto.codes)
+    return { code: 200, message: '获取成功', data }
+  }
+
+  /**
+   * 获取大单数据
+   * POST /api/stock-sdk/large-order
+   */
+  @Post('large-order')
+  async getLargeOrder(@Body() dto: GetLargeOrderDto) {
+    const data = await this.stockSdkService.getLargeOrder(dto.codes)
+    return { code: 200, message: '获取成功', data }
+  }
+
+  /**
+   * 获取代码列表
+   * GET /api/stock-sdk/codes/:market
+   */
+  @Get('codes/:market')
+  async getCodes(@Param() params: GetCodesDto) {
+    const data = await this.stockSdkService.getCodes(params.market)
     return { code: 200, message: '获取成功', data }
   }
 
@@ -116,7 +139,7 @@ export class StockSdkController {
 
   /**
    * 获取带技术指标的K线数据
-   * GET /api/stock-sdk/kline/:market/:code/indicators?period=daily&indicators={"ma":[5,10,20],"macd":true}
+   * GET /api/stock-sdk/kline/:market/:code/indicators?period=daily&indicators={"ma":[5,10,20]}
    */
   @Get('kline/:market/:code/indicators')
   async getKlineWithIndicators(
@@ -131,6 +154,28 @@ export class StockSdkController {
       query.startDate,
       query.endDate,
       query.indicators
+    )
+    return { code: 200, message: '获取成功', data }
+  }
+
+  /**
+   * 获取K线信号
+   * GET /api/stock-sdk/kline/:market/:code/signals?period=daily&maFast=5&maSlow=20
+   */
+  @Get('kline/:market/:code/signals')
+  async getKlineSignals(
+    @Param() params: GetKlineSignalsParamsDto,
+    @Query() query: GetKlineSignalsQueryDto
+  ) {
+    const data = await this.stockSdkService.getKlineSignals(
+      params.market,
+      params.code,
+      query.period,
+      query.adjust,
+      query.startDate,
+      query.endDate,
+      query.maFast,
+      query.maSlow
     )
     return { code: 200, message: '获取成功', data }
   }
