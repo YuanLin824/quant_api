@@ -8,12 +8,13 @@ Content-Type: application/json
 
 ### 用户注册
 # @name register
+# 使用测试账户注册；默认管理员 QuantAdmin 由应用启动时自动创建，重复注册会返回 409
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "username": "QuantAdmin",
-  "password": "Quant.Admin"
+  "username": "testuser",
+  "password": "Test@1234"
 }
 
 
@@ -49,12 +50,14 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
 ### 修改密码
+# oldPassword 须为当前账户密码（登录示例用的是默认管理员 Quant.Admin）
+# 执行成功后所有 refreshToken 失效，刷新令牌示例需重新登录
 POST {{baseUrl}}/auth/change-password
 Content-Type: application/json
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 {
-  "oldPassword": "Password@123",
+  "oldPassword": "Quant.Admin",
   "newPassword": "NewPassword@456"
 }
 
@@ -196,12 +199,13 @@ GET {{baseUrl}}/stock-sdk/batch/hk
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
-### Stock SDK - 获取全部美股行情
-GET {{baseUrl}}/stock-sdk/batch/us
+### Stock SDK - 获取全部美股行情（指定批次大小与并发数）
+GET {{baseUrl}}/stock-sdk/batch/us?batchSize=100&concurrency=5
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
 ### Stock SDK - 按代码批量获取行情
+# batchSize / concurrency 为可选字段
 POST {{baseUrl}}/stock-sdk/batch
 Content-Type: application/json
 Authorization: Bearer {{login.response.body.data.accessToken}}
@@ -212,7 +216,9 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
     "sz000651",
     "hk00700",
     "usAAPL"
-  ]
+  ],
+  "batchSize": 100,
+  "concurrency": 5
 }
 
 

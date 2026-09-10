@@ -54,7 +54,9 @@ npm run commit             # czg 交互式生成符合 commitlint 规范的提�
 - commitlint.config.cjs 是 commitlint 的配置文件(按照这个格式 type(scope): emoji subject 生成提交信息)
 - docker-compose 默认已执行过
 - 不自动启动任何服务，需要启动其他服务时，要进行授权确认
-- 模块的 dto 相关的放到 `模块/dto` 目录下，每个接口的 dto 对应一个文件
+- 模块的 dto 相关的放到 `模块/dto` 目录下，每个接口的 dto 对应一个文件；
+  共享的枚举/常量放 `dto/constants.ts`，组合校验装饰器放 `dto/validators.ts`，跨模块复用的装饰器放 `common/decorators/`
+- DTO 校验优先复用已有的组合装饰器（如 `IsCodeArray`、`IsSdkMarket`、`IsAdjustType`），避免在各 DTO 中重复堆砌校验装饰器
 
 ## 更多文档
 
