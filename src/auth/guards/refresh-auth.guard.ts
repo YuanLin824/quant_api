@@ -1,10 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
-import type { Request } from 'express'
-import { CONFIG_MODULES } from '../../config/constants'
 import { IGlobalConfig } from '../../config/global.config'
-import { AuthenticatedRequest, JwtPayload } from '../auth.types'
+import { JwtPayload } from '../auth.types'
+import { BaseJwtGuard } from './base-jwt.guard'
 
 /**
  * Refresh Token 守卫（RefreshAuthGuard）
@@ -15,43 +14,20 @@ import { AuthenticatedRequest, JwtPayload } from '../auth.types'
  * 属业务状态管理，放 AuthService；守卫只负责"验签 + 类型判别"（纯认证）。
  */
 @Injectable()
-export class RefreshAuthGuard implements CanActivate {
-  private readonly refreshSecretKey: string
-
-  constructor(
-    private readonly jwtService: JwtService,
-    configService: ConfigService
-  ) {
-    this.refreshSecretKey = configService.get<IGlobalConfig>(
-      CONFIG_MODULES.GLOBAL
-    )!.refreshSecretKey
+export class RefreshAuthGuard extends BaseJwtGuard {
+  constructor(jwtService: JwtService, configService: ConfigService) {
+    super(jwtService, configService)
   }
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const req = context.switchToHttp().getRequest<AuthenticatedRequest>()
-
-    const token = this.extractBearerToken(req)
-    if (!token) {
-      throw new UnauthorizedException('无效的刷新令牌')
-    }
-
-    try {
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
-        secret: this.refreshSecretKey,
-      })
-      if (payload.tokenType !== 'refresh' || !payload.jti) {
-        throw new UnauthorizedException('无效的刷新令牌')
-      }
-      req.user = payload
-      return true
-    } catch {
-      throw new UnauthorizedException('无效的刷新令牌')
-    }
+  protected getSecretKey(config: IGlobalConfig): string {
+    return config.refreshSecretKey
   }
 
-  private extractBearerToken(req: Request): string | null {
-    const header = req.headers.authorization
-    if (!header || !header.startsWith('Bearer ')) return null
-    return header.slice('Bearer '.length)
+  protected getErrorMessage(): string {
+    return '无效的刷新令牌'
+  }
+
+  protected isPayloadValid(payload: JwtPayload): boolean {
+    return payload.tokenType === 'refresh' && !!payload.jti
   }
 }
