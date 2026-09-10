@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
-import { IGlobalConfig } from '../../config/global.config'
 import { JwtPayload } from '../auth.types'
 import { BaseJwtGuard } from './base-jwt.guard'
 
@@ -15,15 +14,10 @@ import { BaseJwtGuard } from './base-jwt.guard'
 @Injectable()
 export class JwtAuthGuard extends BaseJwtGuard {
   constructor(jwtService: JwtService, configService: ConfigService) {
-    super(jwtService, configService)
-  }
-
-  protected getSecretKey(config: IGlobalConfig): string {
-    return config.accessSecretKey
-  }
-
-  protected getErrorMessage(): string {
-    return '访问令牌无效或已过期'
+    super(jwtService, configService, {
+      selectSecret: (config) => config.accessSecretKey,
+      errorMessage: '访问令牌无效或已过期',
+    })
   }
 
   protected isPayloadValid(payload: JwtPayload): boolean {

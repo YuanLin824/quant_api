@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
-import { IGlobalConfig } from '../../config/global.config'
 import { JwtPayload } from '../auth.types'
 import { BaseJwtGuard } from './base-jwt.guard'
 
@@ -16,15 +15,10 @@ import { BaseJwtGuard } from './base-jwt.guard'
 @Injectable()
 export class RefreshAuthGuard extends BaseJwtGuard {
   constructor(jwtService: JwtService, configService: ConfigService) {
-    super(jwtService, configService)
-  }
-
-  protected getSecretKey(config: IGlobalConfig): string {
-    return config.refreshSecretKey
-  }
-
-  protected getErrorMessage(): string {
-    return '无效的刷新令牌'
+    super(jwtService, configService, {
+      selectSecret: (config) => config.refreshSecretKey,
+      errorMessage: '无效的刷新令牌',
+    })
   }
 
   protected isPayloadValid(payload: JwtPayload): boolean {
