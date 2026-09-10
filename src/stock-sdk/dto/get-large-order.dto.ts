@@ -1,9 +1,7 @@
-import { IsArray, IsNotEmpty, IsString } from 'class-validator'
+import { IsCodeArray } from '../../common/decorators/is-code-array.decorator'
 
 /** 获取大单数据 DTO */
 export class GetLargeOrderDto {
-  @IsArray({ message: '股票代码必须是数组' })
-  @IsString({ each: true, message: '股票代码必须是字符串' })
-  @IsNotEmpty({ each: true, message: '股票代码不能为空' })
+  @IsCodeArray('股票代码')
   codes!: string[]
 }

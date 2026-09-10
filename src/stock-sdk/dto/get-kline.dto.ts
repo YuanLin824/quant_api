@@ -1,52 +1,13 @@
 import { Transform } from 'class-transformer'
-import { IsEnum, IsIn, IsNotEmpty, IsObject, IsOptional, IsString, Matches } from 'class-validator'
+import { IsIn, IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator'
 import type { IndicatorOptions } from 'stock-sdk'
 import { Market } from '../stock-sdk.types'
-
-/** K线周期 */
-export enum KlinePeriod {
-  /** 日K */
-  DAILY = 'daily',
-  /** 周K */
-  WEEKLY = 'weekly',
-  /** 月K */
-  MONTHLY = 'monthly',
-}
-
-/** 分钟K线周期 */
-export enum MinuteKlinePeriod {
-  /** 1分钟 */
-  M1 = '1',
-  /** 5分钟 */
-  M5 = '5',
-  /** 15分钟 */
-  M15 = '15',
-  /** 30分钟 */
-  M30 = '30',
-  /** 60分钟 */
-  M60 = '60',
-}
-
-/** 复权类型 */
-export enum AdjustType {
-  /** 前复权 */
-  QFQ = 'qfq',
-  /** 后复权 */
-  HFQ = 'hfq',
-  /** 不复权 */
-  NONE = '',
-}
-
-/** K线周期枚举值集合（历史K线 + 分钟K线） */
-export const KLINE_PERIODS = [...Object.values(KlinePeriod), ...Object.values(MinuteKlinePeriod)]
-
-/** 日期格式正则：YYYYMMDD 或 YYYY-MM-DD */
-export const DATE_PATTERN = /^\d{4}-?\d{2}-?\d{2}$/
+import { AdjustType, KLINE_PERIODS } from './constants'
+import { IsAdjustType, IsKlineDate, IsSdkMarket } from './validators'
 
 /** 获取K线数据路径参数 DTO */
 export class GetKlineParamsDto {
-  @Transform(({ value }) => value?.toLowerCase())
-  @IsEnum(Market, { message: '市场类型必须是 cn/hk/us' })
+  @IsSdkMarket()
   market!: Market
 
   @IsString({ message: '股票代码必须是字符串' })
@@ -62,16 +23,13 @@ export class GetKlineQueryDto {
   })
   period?: string
 
-  @IsOptional()
-  @IsEnum(AdjustType, { message: '复权类型必须是 qfq/hfq/空字符串' })
+  @IsAdjustType()
   adjust?: AdjustType
 
-  @IsOptional()
-  @Matches(DATE_PATTERN, { message: '开始日期必须是 YYYYMMDD 或 YYYY-MM-DD 格式' })
+  @IsKlineDate('开始日期')
   startDate?: string
 
-  @IsOptional()
-  @Matches(DATE_PATTERN, { message: '结束日期必须是 YYYYMMDD 或 YYYY-MM-DD 格式' })
+  @IsKlineDate('结束日期')
   endDate?: string
 
   @IsOptional()

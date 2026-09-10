@@ -1,30 +1,14 @@
-import { Transform, Type } from 'class-transformer'
-import {
-  IsEnum,
-  IsIn,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Matches,
-  Min,
-} from 'class-validator'
-import { Market } from '../stock-sdk.types'
-import { AdjustType, DATE_PATTERN, KlinePeriod } from './get-kline.dto'
+import { Type } from 'class-transformer'
+import { IsIn, IsNumber, IsOptional, Min } from 'class-validator'
+import { AdjustType, KlinePeriod } from './constants'
+import { GetKlineParamsDto } from './get-kline.dto'
+import { IsAdjustType, IsKlineDate } from './validators'
 
 /** K线周期枚举值集合（仅历史周期） */
 const SIGNAL_PERIODS = Object.values(KlinePeriod)
 
-/** 获取K线信号路径参数 DTO */
-export class GetKlineSignalsParamsDto {
-  @Transform(({ value }) => value?.toLowerCase())
-  @IsEnum(Market, { message: '市场类型必须是 cn/hk/us' })
-  market!: Market
-
-  @IsString({ message: '股票代码必须是字符串' })
-  @IsNotEmpty({ message: '股票代码不能为空' })
-  code!: string
-}
+/** 获取K线信号路径参数 DTO（与 K 线接口一致：market + code，继承复用校验） */
+export class GetKlineSignalsParamsDto extends GetKlineParamsDto {}
 
 /** 获取K线信号查询参数 DTO */
 export class GetKlineSignalsQueryDto {
@@ -34,16 +18,13 @@ export class GetKlineSignalsQueryDto {
   })
   period?: string
 
-  @IsOptional()
-  @IsEnum(AdjustType, { message: '复权类型必须是 qfq/hfq/空字符串' })
+  @IsAdjustType()
   adjust?: AdjustType
 
-  @IsOptional()
-  @Matches(DATE_PATTERN, { message: '开始日期必须是 YYYYMMDD 或 YYYY-MM-DD 格式' })
+  @IsKlineDate('开始日期')
   startDate?: string
 
-  @IsOptional()
-  @Matches(DATE_PATTERN, { message: '结束日期必须是 YYYYMMDD 或 YYYY-MM-DD 格式' })
+  @IsKlineDate('结束日期')
   endDate?: string
 
   @IsOptional()

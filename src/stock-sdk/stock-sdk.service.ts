@@ -8,6 +8,13 @@ import {
   Market,
 } from './stock-sdk.types'
 
+/** 内部市场枚举 → stock-sdk 市场标识（'A' 即 A 股） */
+const SDK_MARKET_MAP: Record<Market, 'A' | 'HK' | 'US'> = {
+  [Market.CN]: 'A',
+  [Market.HK]: 'HK',
+  [Market.US]: 'US',
+}
+
 /** K 线信号（与 stock-sdk KlineSignal 结构一致） */
 export interface KlineSignal {
   /** 信号类型（MA/MACD/KDJ 金叉死叉、KDJ/RSI 超买超卖、BOLL 突破、SAR 反转） */
@@ -163,12 +170,7 @@ export class StockSdkService {
    * @returns 目标交易日 (YYYYMMDD)
    */
   private async resolveMinuteKlineDate(market: Market, now: Date = new Date()): Promise<string> {
-    const marketMap: Record<string, 'A' | 'HK' | 'US'> = {
-      [Market.CN]: 'A',
-      [Market.HK]: 'HK',
-      [Market.US]: 'US',
-    }
-    const sdkMarket = marketMap[market]
+    const sdkMarket = SDK_MARKET_MAP[market]
     const today = this.formatDate(now)
     if (!sdkMarket) return today
 
@@ -251,13 +253,9 @@ export class StockSdkService {
     if (endDate) options.endDate = endDate
 
     // 有 indicators 时调用 withIndicators（仅支持 daily/weekly/monthly）
-    const marketMap: Record<string, 'A' | 'HK' | 'US'> = {
-      [Market.CN]: 'A',
-      [Market.HK]: 'HK',
-      [Market.US]: 'US',
-    }
+    const sdkMarket = SDK_MARKET_MAP[market]
     if (indicators && Object.keys(indicators).length > 0) {
-      if (marketMap[market]) options.market = marketMap[market]
+      if (sdkMarket) options.market = sdkMarket
       return this.sdk.kline.withIndicators(code, options as any)
     }
 
@@ -308,13 +306,9 @@ export class StockSdkService {
     if (maSlow) options.maSlow = maSlow
 
     // 通过 options 传递 market
-    const marketMap: Record<string, string> = {
-      cn: 'A',
-      hk: 'HK',
-      us: 'US',
-    }
-    if (market && marketMap[market]) {
-      options.market = marketMap[market] as 'A' | 'HK' | 'US'
+    const sdkMarket = SDK_MARKET_MAP[market]
+    if (sdkMarket) {
+      options.market = sdkMarket
     }
 
     return this.sdk.kline.signals(code, options as any)
