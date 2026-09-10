@@ -4,6 +4,9 @@
 /build
 
 # Logs
+# winston 生产环境输出目录：按小时轮转，归档为 .gz（如 2026-09-11-10.info.log.gz），
+# 仅靠 *.log 无法覆盖 .gz，故整目录忽略
+logger_prod/
 logs
 *.log
 npm-debug.log*

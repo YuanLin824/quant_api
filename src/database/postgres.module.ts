@@ -42,8 +42,8 @@ const POSTGRES_CONFIG = registerAs(CONFIG_MODULES.PG, (): IPostgresConfig => {
 /**
  * 数据库模块：TypeORM 数据源（postgres 驱动，主数据库，已在 AppModule 挂载）
  *
- * - 实体命名约定：Postgres 实体统一使用 *.postgres.entity.ts 后缀（见下方 entities glob），
- *   MySQL 实体使用 *.mysql.entity.ts 后缀，避免两个 DataSource 重复收集
+ * - 实体收集：下方 entities glob（扫描全部 `*.entity.ts`）+ autoLoadEntities（各模块 forFeature 注册的实体）。
+ *   新增实体使用 `*.entity.ts` 后缀即可自动收集；抽象基类（如 BaseEntity）无 @Entity 装饰器，会被 TypeORM 忽略
  * - 启动即连库（TypeORM 标准行为）：DB 不可达时启动失败（重试 5 次×1s），与 Redis 无限重试容错不同
  */
 @Module({
