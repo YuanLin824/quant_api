@@ -103,6 +103,10 @@ Authorization: Bearer <access_token>
 }
 ```
 
+> **字段单位提示**：`volume` / `outerVolume` / `innerVolume` / `volume2` 单位为**手**，
+> `amount` 为**万元**，`circulatingMarketCap` / `totalMarketCap` 为**亿元**。
+> `timestamp` 在时间无法解析时为 `null`；估值类字段（`pe` / `pb` / `turnoverRate` 等）也可能为 `null`。
+
 ### 港股响应 (HKQuote)
 
 ```json
@@ -340,13 +344,15 @@ Authorization: Bearer <access_token>
 
 **响应字段说明**
 
-| 字段     | 说明                                               |
-| -------- | -------------------------------------------------- |
-| code     | 代码（带市场前缀，如 `sh600519`）                  |
-| name     | 名称                                               |
-| market   | 市场标识（如 `sh`/`sz`/`hk`/`us`）                 |
-| type     | 上游原始资产类型（如 `GP-A`/`ZS`/`JJ`）            |
-| category | 标准化资产分类（`stock`/`index`/`fund`），可选字段 |
+| 字段     | 说明                                                                                                       |
+| -------- | ---------------------------------------------------------------------------------------------------------- |
+| code     | 代码（带市场前缀，如 `sh600519`）                                                                          |
+| name     | 名称                                                                                                       |
+| market   | 市场标识（如 `sh`/`sz`/`hk`/`us`）                                                                         |
+| type     | 上游原始资产类型字符串（如 `GP-A` 股票 / `ZS` 指数 / `JJ`、`KJ` 基金 / `ZQ` 债券 / `QH` 期货 / `QZ` 期权） |
+| category | 标准化资产分类，可选字段，取值：`stock` / `index` / `fund` / `bond` / `futures` / `option` / `other`       |
+
+> 建议使用归一化后的 `category` 做类型判断，`type` 保留上游原值以兼容。
 
 **示例**
 
@@ -471,11 +477,11 @@ curl -X POST http://localhost:3001/api/stock-sdk/batch \
 
 ## 获取K线数据
 
-获取指定股票的历史K线、分钟K线或带技术指标的K线数据。根据参数自动判断：
+获取指定股票的历史K线、分钟K线或带技术指标的K线数据。单接口按参数自动分派，**优先级自上而下**：
 
-- 传入 `indicators` → 带技术指标K线（调用 `withIndicators`）
-- `period` 为 `daily` / `weekly` / `monthly` → 历史K线
-- `period` 为 `1` / `5` / `15` / `30` / `60` → 分钟K线
+1. `period` 为 `1` / `5` / `15` / `30` / `60` → **分钟K线**（此时 `indicators` 不生效）
+2. `indicators` 非空 → **带技术指标K线**（仅支持 `daily` / `weekly` / `monthly`）
+3. 其余情况 → **历史K线**（`daily` / `weekly` / `monthly`）
 
 **请求**
 
@@ -502,10 +508,28 @@ Authorization: Bearer <access_token>
 | 参数       | 类型   | 必填 | 说明                                                                                                           |
 | ---------- | ------ | ---- | -------------------------------------------------------------------------------------------------------------- |
 | period     | string | 否   | K线周期: `daily`(日K) / `weekly`(周K) / `monthly`(月K) 或 分钟K线 `1` / `5` / `15` / `30` / `60`，默认 `daily` |
-| adjust     | string | 否   | 复权类型: `qfq`(前复权) / `hfq`(后复权) / 空字符串(不复权)，默认 `qfq`                                         |
+| adjust     | string | 否   | 复权类型: `qfq`(前复权) / `hfq`(后复权) / 空字符串(不复权)，默认 `qfq`。**1 分钟K线不支持复权**                |
 | startDate  | string | 否   | 开始日期 (YYYYMMDD 或 YYYY-MM-DD)                                                                              |
 | endDate    | string | 否   | 结束日期 (YYYYMMDD 或 YYYY-MM-DD)                                                                              |
-| indicators | object | 否   | 指标配置 JSON 对象，传入时自动调用带指标K线接口                                                                |
+| indicators | object | 否   | 指标配置 JSON 对象，传入时返回带指标的K线；分钟周期下会被忽略                                                  |
+
+> **参数校验**：`period` 仅接受上述枚举值，`startDate` / `endDate` 需符合 `YYYYMMDD` 或 `YYYY-MM-DD` 格式，否则返回 `400`。
+
+### 1 分钟K线的交易日自动定位
+
+`period=1` 且**未指定** `startDate` / `endDate` 时，服务端会依据当前交易时段自动确定目标交易日，避免盘前或非交易日取到空数据：
+
+| 当前时段 | 状态值        | 目标交易日 |
+| -------- | ------------- | ---------- |
+| 盘前     | `pre_market`  | 前一交易日 |
+| 交易中   | `open`        | 当天       |
+| 午休     | `lunch_break` | 当天       |
+| 盘后     | `after_hours` | 当天       |
+| 休市     | `closed`      | 前一交易日 |
+
+> `closed` 涵盖周末、节假日与凌晨等远离交易时段的时间。
+> 该行为**仅对 `period=1` 生效**；`5` / `15` / `30` / `60` 分钟周期由上游返回默认区间。
+> 显式传入 `startDate` / `endDate` 时不作任何调整，按传入值查询。
 
 **indicators 指标配置**
 
@@ -528,7 +552,65 @@ Authorization: Bearer <access_token>
 
 **响应**
 
-返回 stock-sdk 原始格式的 K 线数组。
+返回 stock-sdk 原始格式的数据数组，**结构随周期不同**：
+
+| 周期                           | 结构           | 时间字段                     | 特有字段                     |
+| ------------------------------ | -------------- | ---------------------------- | ---------------------------- |
+| `daily` / `weekly` / `monthly` | HistoryKline   | `date`（`YYYY-MM-DD`）       | `code`、`turnoverRate`       |
+| `1`                            | MinuteTimeline | `time`（`YYYY-MM-DD HH:mm`） | `avgPrice`（均价）           |
+| `5` / `15` / `30` / `60`       | MinuteKline    | `time`（`YYYY-MM-DD HH:mm`） | `amplitude`、`changePercent` |
+
+三者共有的字段：`timestamp`、`tz`、`open`、`close`、`high`、`low`、`volume`、`amount`；价格类字段均可能为 `null`。
+
+A 股日K线示例：
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": [
+    {
+      "date": "2024-01-15",
+      "timestamp": 1705276800000,
+      "tz": "Asia/Shanghai",
+      "code": "600519",
+      "open": 1785.0,
+      "close": 1800.0,
+      "high": 1810.0,
+      "low": 1780.0,
+      "volume": 12345678,
+      "amount": 222222,
+      "amplitude": 1.68,
+      "changePercent": 1.15,
+      "change": 20.5,
+      "turnoverRate": 0.85
+    }
+  ]
+}
+```
+
+1 分钟K线（分时结构，注意 `time` 与 `avgPrice`）示例：
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": [
+    {
+      "time": "2024-01-15 09:31",
+      "timestamp": 1705282260000,
+      "tz": "Asia/Shanghai",
+      "open": 1785.0,
+      "close": 1786.5,
+      "high": 1787.0,
+      "low": 1784.5,
+      "volume": 1200,
+      "amount": 2143800,
+      "avgPrice": 1786.2
+    }
+  ]
+}
+```
 
 **示例**
 
@@ -543,6 +625,14 @@ curl http://localhost:3001/api/stock-sdk/kline/hk/00700?period=weekly \
 
 # 获取美股月K线
 curl http://localhost:3001/api/stock-sdk/kline/us/AAPL?period=monthly \
+  -H "Authorization: Bearer <access_token>"
+
+# 获取A股1分钟K线（自动定位当前/前一交易日）
+curl http://localhost:3001/api/stock-sdk/kline/cn/600519?period=1 \
+  -H "Authorization: Bearer <access_token>"
+
+# 获取A股1分钟K线（显式指定交易日，不触发自动定位）
+curl "http://localhost:3001/api/stock-sdk/kline/cn/600519?period=1&startDate=20240115&endDate=20240115" \
   -H "Authorization: Bearer <access_token>"
 
 # 获取A股5分钟K线
@@ -609,7 +699,31 @@ Authorization: Bearer <access_token>
 
 **响应**
 
-返回 stock-sdk 原始格式的大单数据数组。
+响应 `data` 为单个交易日的买卖盘大单/小单占比数组（PanelLargeOrder）：
+
+| 字段           | 类型   | 说明         |
+| -------------- | ------ | ------------ |
+| buyLargeRatio  | number | 买盘大单占比 |
+| buySmallRatio  | number | 买盘小单占比 |
+| sellLargeRatio | number | 卖盘大单占比 |
+| sellSmallRatio | number | 卖盘小单占比 |
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": [
+    {
+      "buyLargeRatio": 0.32,
+      "buySmallRatio": 0.18,
+      "sellLargeRatio": 0.28,
+      "sellSmallRatio": 0.22
+    }
+  ]
+}
+```
+
+> ⚠️ 返回元素**不包含股票代码**，批量查询时需按请求 `codes` 的顺序自行对应。
 
 **示例**
 
@@ -648,7 +762,15 @@ Authorization: Bearer <access_token>
 
 **响应**
 
-返回代码字符串数组。
+响应 `data` 为代码字符串数组（纯代码，不含市场前缀）。
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": ["600519", "000651", "000858"]
+}
+```
 
 **示例**
 
@@ -709,13 +831,45 @@ Authorization: Bearer <access_token>
 
 **响应**
 
-返回 K 线信号数组，每个信号包含：
+响应 `data` 为识别出的信号数组：
 
-- `type` - 信号类型（MA/MACD/KDJ 金叉死叉、超买超卖等）
-- `date` - 信号日期
-- `timestamp` - 时间戳
-- `close` - 收盘价
-- `detail` - 附加信息
+| 字段      | 类型                   | 说明                                                 |
+| --------- | ---------------------- | ---------------------------------------------------- |
+| type      | string                 | 信号类型，共 14 种，取值见下表                       |
+| date      | string                 | 信号发生K线的日期（通常 `YYYY-MM-DD`）               |
+| timestamp | number                 | 信号发生K线的时间戳（毫秒）                          |
+| close     | number \| null         | 信号发生K线的收盘价                                  |
+| detail    | Record<string, number> | 附加信息（如金叉的快慢周期、超买超卖的指标值），可选 |
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": [
+    {
+      "type": "ma_golden_cross",
+      "date": "2026-06-15",
+      "timestamp": 1781481600000,
+      "close": 1720.0,
+      "detail": { "fast": 5, "slow": 20 }
+    }
+  ]
+}
+```
+
+**信号类型取值**
+
+| 分类      | 取值                                                                       |
+| --------- | -------------------------------------------------------------------------- |
+| MA 交叉   | `ma_golden_cross` / `ma_death_cross`                                       |
+| MACD 交叉 | `macd_golden_cross` / `macd_death_cross`                                   |
+| KDJ       | `kdj_golden_cross` / `kdj_death_cross` / `kdj_overbought` / `kdj_oversold` |
+| RSI       | `rsi_overbought` / `rsi_oversold`                                          |
+| BOLL      | `boll_break_upper` / `boll_break_lower`                                    |
+| SAR       | `sar_reversal_up` / `sar_reversal_down`                                    |
+
+> 不传 `startDate` 时将在全部历史上识别信号，数据量可能较大；
+> 只关注近期信号时建议传入 `startDate` 收窄窗口。
 
 **示例**
 

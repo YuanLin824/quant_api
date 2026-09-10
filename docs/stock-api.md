@@ -4,7 +4,8 @@
 
 > 所有 Stock API 接口需要 JWT 认证，请在请求头中携带 `Authorization: Bearer <access_token>`
 >
-> 使用 stock-api 库，自动从腾讯/新浪/东方财富获取数据
+> 使用 stock-api 库，通过 `stocks.auto` 在 tencent → sina → eastmoney 之间自动兜底，
+> 单个数据源不可用时自动切换，响应中的 `source` 字段标识实际生效的数据源。
 
 ## 获取单只股票行情
 
@@ -150,9 +151,11 @@ Authorization: Bearer <access_token>
 | 参数   | 类型   | 必填 | 说明                                                         |
 | ------ | ------ | ---- | ------------------------------------------------------------ |
 | period | string | 否   | K线周期: `day`(日K) / `week`(周K) / `month`(月K)，默认 `day` |
-| count  | number | 否   | 返回数量，默认 120                                           |
+| count  | number | 否   | 返回数量，默认 120，范围 1-1000                              |
 
 **响应**
+
+`volume` 与 `source` 为可选字段，上游未提供时不会出现在响应中。
 
 ```json
 {

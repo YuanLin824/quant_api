@@ -234,8 +234,23 @@ GET {{baseUrl}}/stock-sdk/kline/us/AAPL?period=monthly
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
+### Stock SDK - 获取A股1分钟K线（自动定位当前/前一交易日）
+GET {{baseUrl}}/stock-sdk/kline/cn/600519?period=1
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取A股1分钟K线（显式指定交易日）
+GET {{baseUrl}}/stock-sdk/kline/cn/600519?period=1&startDate=20240115&endDate=20240115
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
 ### Stock SDK - 获取A股5分钟K线
 GET {{baseUrl}}/stock-sdk/kline/cn/600519?period=5
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取指定日期范围的K线
+GET {{baseUrl}}/stock-sdk/kline/cn/600519?startDate=20240101&endDate=20240131
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
@@ -260,7 +275,8 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
 ### Stock SDK - 获取带多个指标的K线
-GET {{baseUrl}}/stock-sdk/kline/cn/600519?period=1&indicators={"ma":[5,10,20],"macd":true,"boll":true,"rsi":true}
+# 注意：分钟周期（period=1/5/15/30/60）下 indicators 不生效
+GET {{baseUrl}}/stock-sdk/kline/cn/600519?period=daily&indicators={"ma":[5,10,20],"macd":true,"boll":true,"rsi":true}
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 

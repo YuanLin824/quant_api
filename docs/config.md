@@ -23,11 +23,28 @@
 
 ### 安全特性
 
-1. **密码加密**: 使用 bcrypt 算法加密存储
-2. **登录失败限制**: 连续 5 次密码错误后，账号将被锁定 15 分钟
-3. **防时序攻击**: 密码比对使用恒定时间算法
-4. **请求限流**: 所有接口都有访问频率限制
-5. **安全头**: 使用 Helmet 设置安全 HTTP 头
+1. **密码加密**: 使用 bcrypt 算法加密存储（12 轮）
+2. **登录失败限制**: 连续 5 次密码错误后，账号将被锁定 15 分钟（返回 `403`）
+3. **防时序攻击**: 密码比对使用恒定时间算法，用户不存在时执行等价比对
+4. **防用户名枚举**: 用户不存在与密码错误返回相同消息
+5. **请求限流**: 按接口差异化配置，详见下表
+6. **安全头**: 使用 Helmet 设置安全 HTTP 头（CSP、HSTS、XSS 保护等）
+7. **请求体限制**: 10KB，防止大负载 DoS
+
+### 限流规则
+
+| 接口                         | 限制                 |
+| ---------------------------- | -------------------- |
+| 全局默认                     | 60 秒内最多 100 次   |
+| `POST /auth/register`        | 每小时最多 5 次      |
+| `POST /auth/login`           | 每 10 分钟最多 10 次 |
+| `POST /auth/refresh`         | 每 10 分钟最多 20 次 |
+| `POST /auth/change-password` | 每小时最多 5 次      |
+| `POST /auth/logout`          | 不限流               |
+| `POST /auth/logout-all`      | 不限流               |
+| Stock API / Stock SDK        | 不限流               |
+
+> 触发限流返回 `429`；账号锁定返回 `403`，两者含义不同。
 
 ---
 
@@ -48,11 +65,14 @@ JWT_REFRESH_SECRET_KEY="your-refresh-secret-key"
 ### 可选的环境变量
 
 ```bash
-# 服务配置
-PORT="3001"
-API_PREFIX="/api"
+# 运行模式：仅接受 dev / prod（不是 production）
+NODE_ENV="dev"
 
-# JWT 配置
+# 服务配置
+PORT="3001"                    # 默认 3000
+API_PREFIX="/api"              # 默认 /api
+
+# JWT 配置（支持 s/m/h/d 单位）
 JWT_ACCESS_EXPIRES_IN="15m"
 JWT_REFRESH_EXPIRES_IN="7d"
 
@@ -62,9 +82,12 @@ AUTH_MAX_DEVICES="5"
 # Redis 配置
 REDIS_KEY_PREFIX="quant-"
 
-# CORS 配置（生产环境必须）
+# CORS 配置（生产环境必须，逗号分隔多个来源）
 ALLOWED_ORIGINS="https://example.com"
 ```
+
+> `NODE_ENV` 决定加载哪一组 `.env` 文件与是否开启数据库表结构自动同步，
+> 完整加载顺序见项目 `.claude/environment.md`。
 
 ---
 
