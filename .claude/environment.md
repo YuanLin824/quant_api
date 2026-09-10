@@ -47,5 +47,5 @@ ALLOWED_ORIGINS="https://example.com"  # 生产环境必须配置，否则启动
 CRYPTO_PROXY="http://127.0.0.1:7890"   # 预留：加密数据采集代理，当前代码未使用
 ```
 
-> `PG_URL` 与 `REDIS_URL` 为统一连接串，`.env.example` 中由 `PG_USER`/`PG_PASS` 等分项拼接生成；
-> 分项变量仅供 `docker-compose` 使用，应用本身只读取连接串。
+> `PG_URL` / `REDIS_URL` 是应用实际读取的统一连接串，在 `.env.example` 中分别由 `PG_*`、`REDIS_*` 分项拼接生成；
+> 这些分项变量仅供 `docker-compose` 使用，应用代码只读取连接串。
