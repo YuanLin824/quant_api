@@ -151,6 +151,49 @@ export class StockSdkService {
   }
 
   /**
+   * 判断 1 分钟 K 线应查询的交易日
+   *
+   * 规则（period='1' 时生效）：
+   * - 盘前（pre_market）：当天尚未产生数据 → 返回前一交易日
+   * - 交易中 / 午休 / 盘后（open/lunch_break/after_hours）：当天有数据 → 返回当天
+   * - 休市（closed，周末/节假日/凌晨）：当天无数据 → 返回前一交易日
+   *
+   * @param market 市场类型 (cn/hk/us)
+   * @param now 当前时间（默认取系统时间）
+   * @returns 目标交易日 (YYYYMMDD)
+   */
+  private async resolveMinuteKlineDate(market: Market, now: Date = new Date()): Promise<string> {
+    const marketMap: Record<string, 'A' | 'HK' | 'US'> = {
+      [Market.CN]: 'A',
+      [Market.HK]: 'HK',
+      [Market.US]: 'US',
+    }
+    const sdkMarket = marketMap[market]
+    const today = this.formatDate(now)
+    if (!sdkMarket) return today
+
+    const status = this.sdk.calendar.marketStatus(sdkMarket, now)
+
+    // 盘前 / 休市：当天无数据，回退到前一交易日
+    if (status === 'pre_market' || status === 'closed') {
+      const prev = await this.sdk.calendar.prevTradingDay(now)
+      // prevTradingDay 返回 YYYY-MM-DD，统一转为 YYYYMMDD
+      return prev ? prev.replace(/-/g, '') : today
+    }
+
+    // 交易中 / 午休 / 盘后：当天有数据
+    return today
+  }
+
+  /** 格式化日期为 YYYYMMDD */
+  private formatDate(date: Date): string {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}${m}${d}`
+  }
+
+  /**
    * 获取K线数据（历史K线/分钟K线/带指标K线）
    * @param market 市场类型 (cn/hk/us)
    * @param code 股票代码
@@ -175,21 +218,22 @@ export class StockSdkService {
     const options: KlineRequestOptions = {}
     if (period) options.period = period
     if (adjust !== undefined && adjust !== null) options.adjust = adjust
-    if (startDate) options.startDate = startDate
-    if (endDate) options.endDate = endDate
+    if (indicators) options.indicators = indicators
 
     // 分钟周期集合：period 为 1/5/15/30/60 时调用分钟K线接口
-    // withIndicators 仅支持 daily/weekly/monthly，分钟周期不传指标
     const isMinutePeriod = ['1', '5', '15', '30', '60'].includes(period ?? '')
 
-    const marketMap: Record<string, string> = {
-      [Market.CN]: 'A',
-      [Market.HK]: 'HK',
-      [Market.US]: 'US',
-    }
-
-    // 分钟周期：始终调用分钟K线接口（不支持指标）
     if (isMinutePeriod) {
+      // period='1' 时未指定日期范围，按交易时段自动定位交易日
+      let resolvedStart = startDate
+      let resolvedEnd = endDate
+      if (period === '1' && !startDate && !endDate) {
+        resolvedStart = await this.resolveMinuteKlineDate(market)
+        resolvedEnd = resolvedStart
+      }
+      if (resolvedStart) options.startDate = resolvedStart
+      if (resolvedEnd) options.endDate = resolvedEnd
+
       switch (market) {
         case Market.CN:
           return this.sdk.kline.cnMinute(code, options as any)
@@ -202,10 +246,18 @@ export class StockSdkService {
       }
     }
 
+    // 历史周期：指定日期范围
+    if (startDate) options.startDate = startDate
+    if (endDate) options.endDate = endDate
+
     // 有 indicators 时调用 withIndicators（仅支持 daily/weekly/monthly）
+    const marketMap: Record<string, 'A' | 'HK' | 'US'> = {
+      [Market.CN]: 'A',
+      [Market.HK]: 'HK',
+      [Market.US]: 'US',
+    }
     if (indicators && Object.keys(indicators).length > 0) {
-      options.indicators = indicators
-      if (marketMap[market]) options.market = marketMap[market] as 'A' | 'HK' | 'US'
+      if (marketMap[market]) options.market = marketMap[market]
       return this.sdk.kline.withIndicators(code, options as any)
     }
 
