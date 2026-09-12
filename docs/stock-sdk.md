@@ -514,6 +514,9 @@ Authorization: Bearer <access_token>
 | indicators | object | 否   | 指标配置 JSON 对象，传入时返回带指标的K线；分钟周期下会被忽略                                                  |
 
 > **参数校验**：`period` 仅接受上述枚举值，`startDate` / `endDate` 需符合 `YYYYMMDD` 或 `YYYY-MM-DD` 格式，否则返回 `400`。
+>
+> **不传日期时的范围**：不传 `startDate` / `endDate` 时，上游按 `19700101` ~ `20500101` 请求，即返回其可提供的**全部历史 K 线**，
+> 数据量与耗时都较大，建议显式传入 `startDate`。（信号接口与之不同，见[默认回溯窗口](#默认回溯窗口)）
 
 ### 1 分钟K线的交易日自动定位
 
@@ -820,14 +823,28 @@ Authorization: Bearer <access_token>
 
 **查询参数**
 
-| 参数      | 类型   | 必填 | 说明                                                  |
-| --------- | ------ | ---- | ----------------------------------------------------- |
-| period    | string | 否   | K线周期: `daily` / `weekly` / `monthly`，默认 `daily` |
-| adjust    | string | 否   | 复权类型: `qfq` / `hfq` / 空字符串                    |
-| startDate | string | 否   | 开始日期 (YYYYMMDD 或 YYYY-MM-DD)                     |
-| endDate   | string | 否   | 结束日期 (YYYYMMDD 或 YYYY-MM-DD)                     |
-| maFast    | number | 否   | MA 快线周期，默认 5                                   |
-| maSlow    | number | 否   | MA 慢线周期，默认 20                                  |
+| 参数      | 类型   | 必填 | 说明                                                                  |
+| --------- | ------ | ---- | --------------------------------------------------------------------- |
+| period    | string | 否   | K线周期: `daily` / `weekly` / `monthly`，默认 `daily`                 |
+| adjust    | string | 否   | 复权类型: `qfq` / `hfq` / 空字符串                                    |
+| startDate | string | 否   | 开始日期 (YYYYMMDD 或 YYYY-MM-DD)；**不传时按 `period` 套用默认窗口** |
+| endDate   | string | 否   | 结束日期 (YYYYMMDD 或 YYYY-MM-DD)                                     |
+| maFast    | number | 否   | MA 快线周期，默认 5                                                   |
+| maSlow    | number | 否   | MA 慢线周期，默认 20                                                  |
+
+### 默认回溯窗口
+
+不传 `startDate` 时，服务端按 `period` 套用默认窗口，避免直接扫描全部历史：
+
+| period    | 默认窗口   |
+| --------- | ---------- |
+| `daily`   | 近 1 个月  |
+| `weekly`  | 近 6 个月  |
+| `monthly` | 近 36 个月 |
+
+> 周期越长单根 K 线跨度越大，需回溯更久才能覆盖相近的时间范围。
+> 显式传入 `startDate` 时以传入值为准；若只传了 `endDate`，默认窗口以 `endDate` 为基准逆推（而非当前时间），
+> 保证回溯范围落在查询区间内。
 
 **响应**
 
@@ -868,13 +885,22 @@ Authorization: Bearer <access_token>
 | BOLL      | `boll_break_upper` / `boll_break_lower`                                    |
 | SAR       | `sar_reversal_up` / `sar_reversal_down`                                    |
 
-> 不传 `startDate` 时将在全部历史上识别信号，数据量可能较大；
-> 只关注近期信号时建议传入 `startDate` 收窄窗口。
-
 **示例**
 
 ```bash
-# 获取K线信号
-curl http://localhost:3001/api/stock-sdk/kline/cn/600519/signals?period=daily&maFast=5&maSlow=20 \
+# 获取日线信号（默认近 1 个月）
+curl "http://localhost:3001/api/stock-sdk/kline/cn/600519/signals?period=daily" \
+  -H "Authorization: Bearer <access_token>"
+
+# 获取周线信号（默认近 6 个月）
+curl "http://localhost:3001/api/stock-sdk/kline/cn/600519/signals?period=weekly" \
+  -H "Authorization: Bearer <access_token>"
+
+# 获取月线信号（默认近 36 个月）
+curl "http://localhost:3001/api/stock-sdk/kline/us/AAPL/signals?period=monthly" \
+  -H "Authorization: Bearer <access_token>"
+
+# 显式指定时间范围（覆盖默认窗口）与 MA 快慢线
+curl "http://localhost:3001/api/stock-sdk/kline/cn/600519/signals?period=daily&startDate=20240101&endDate=20240131&maFast=5&maSlow=20" \
   -H "Authorization: Bearer <access_token>"
 ```

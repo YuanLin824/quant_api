@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import type { FundQuote, SearchResult } from 'stock-sdk'
 import { StockSDK } from 'stock-sdk'
+import { KlinePeriod } from './dto/constants'
 import {
   CodesMarket,
   KlineRequestOptions,
@@ -13,6 +14,18 @@ const SDK_MARKET_MAP: Record<Market, 'A' | 'HK' | 'US'> = {
   [Market.CN]: 'A',
   [Market.HK]: 'HK',
   [Market.US]: 'US',
+}
+
+/**
+ * 信号查询的默认回溯窗口（月）
+ *
+ * 未显式传 startDate 时生效：周期越长单根 K 线跨度越大，需回溯更久才能覆盖相近的时间范围。
+ * 该默认值同时约束了单次扫描的数据量，避免不带日期直接扫全历史。
+ */
+const SIGNAL_LOOKBACK_MONTHS: Record<KlinePeriod, number> = {
+  [KlinePeriod.DAILY]: 1,
+  [KlinePeriod.WEEKLY]: 6,
+  [KlinePeriod.MONTHLY]: 36,
 }
 
 /** K 线信号（与 stock-sdk KlineSignal 结构一致） */
@@ -196,6 +209,41 @@ export class StockSdkService {
   }
 
   /**
+   * 解析 YYYYMMDD 或 YYYY-MM-DD 为本地日期对象
+   *
+   * 格式已由 DTO 的 DATE_PATTERN 保证，此处不重复校验。
+   */
+  private parseDate(value: string): Date {
+    const d = value.replace(/-/g, '')
+    return new Date(Number(d.slice(0, 4)), Number(d.slice(4, 6)) - 1, Number(d.slice(6, 8)))
+  }
+
+  /**
+   * 计算信号查询的默认起始日期
+   *
+   * 未显式传 startDate 时按周期套用回溯窗口（见 SIGNAL_LOOKBACK_MONTHS）。
+   * 基准时间取 endDate（若提供）或当前时间——以 endDate 为基准可保证默认窗口
+   * 不会落在查询区间之外（否则指定历史 endDate 时会得到空结果）。
+   *
+   * @param period K线周期，未传或非历史周期时按日线处理
+   * @param endDate 查询结束日期 (YYYYMMDD 或 YYYY-MM-DD)
+   * @returns 起始日期 (YYYYMMDD)
+   */
+  private resolveSignalStartDate(period?: string, endDate?: string): string {
+    const months =
+      SIGNAL_LOOKBACK_MONTHS[period as KlinePeriod] ?? SIGNAL_LOOKBACK_MONTHS[KlinePeriod.DAILY]
+    const base = endDate ? this.parseDate(endDate) : new Date()
+
+    const y = base.getFullYear()
+    const m = base.getMonth() - months
+    // 日期需钳制到目标月最后一天：直接用 setMonth 会让 3/31 减一月溢出成 3/2（JS Date 按溢出处理），
+    // 导致回溯窗口短于一个月。day=0 取的是上个月最后一天，此处即目标月月末。
+    const lastDayOfTargetMonth = new Date(y, m + 1, 0).getDate()
+
+    return this.formatDate(new Date(y, m, Math.min(base.getDate(), lastDayOfTargetMonth)))
+  }
+
+  /**
    * 获取K线数据（历史K线/分钟K线/带指标K线）
    * @param market 市场类型 (cn/hk/us)
    * @param code 股票代码
@@ -280,7 +328,7 @@ export class StockSdkService {
    * @param code 股票代码
    * @param period K线周期 (daily/weekly/monthly)
    * @param adjust 复权类型 (qfq/hfq/空字符串)
-   * @param startDate 开始日期 (YYYYMMDD 或 YYYY-MM-DD)
+   * @param startDate 开始日期 (YYYYMMDD 或 YYYY-MM-DD)；未传时按 period 套用默认回溯窗口
    * @param endDate 结束日期 (YYYYMMDD 或 YYYY-MM-DD)
    * @param maFast MA 快线周期（默认 5）
    * @param maSlow MA 慢线周期（默认 20）
@@ -300,7 +348,8 @@ export class StockSdkService {
     const options: KlineSignalsRequestOptions = {}
     if (period) options.period = period
     if (adjust !== undefined && adjust !== null) options.adjust = adjust
-    if (startDate) options.startDate = startDate
+    // 起始日期始终下发：未显式指定时按周期套用默认回溯窗口，避免直接扫全历史
+    options.startDate = startDate ?? this.resolveSignalStartDate(period, endDate)
     if (endDate) options.endDate = endDate
     if (maFast) options.maFast = maFast
     if (maSlow) options.maSlow = maSlow

@@ -286,8 +286,23 @@ GET {{baseUrl}}/stock-sdk/kline/cn/600519?period=daily&indicators={"ma":[5,10,20
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
-### Stock SDK - 获取K线信号
-GET {{baseUrl}}/stock-sdk/kline/cn/600519/signals?period=daily&maFast=5&maSlow=20
+### Stock SDK - 获取日线信号（默认近 1 个月）
+GET {{baseUrl}}/stock-sdk/kline/cn/600519/signals?period=daily
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取周线信号（默认近 6 个月）
+GET {{baseUrl}}/stock-sdk/kline/cn/600519/signals?period=weekly
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取月线信号（默认近 36 个月）
+GET {{baseUrl}}/stock-sdk/kline/cn/600519/signals?period=monthly
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### Stock SDK - 获取K线信号（显式指定范围与 MA 参数）
+GET {{baseUrl}}/stock-sdk/kline/cn/600519/signals?period=daily&startDate=20240101&endDate=20240131&maFast=5&maSlow=20
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 

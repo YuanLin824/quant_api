@@ -34,6 +34,8 @@
 
 9. **异常统一收口**: 全局 `AllExceptionsFilter` 将 HttpException、TypeORM `QueryFailedError`（按 PostgreSQL 错误码映射）及未知异常统一为 `{ code, data, message }`，并记录含客户端 IP 的结构化日志。
 
+10. **信号默认回溯窗口**: `GET /stock-sdk/kline/:market/:code/signals` 未传 `startDate` 时按 `period` 套用默认窗口（日线 1 月 / 周线 6 月 / 月线 36 月），避免默认扫描全历史。基准时间取 `endDate`（若提供）或当前时间，保证窗口不会落在查询区间之外。
+
 ## 日志
 
 - 使用 Winston 替代 NestJS 默认 Logger（`src/config/winston.ts`）：
