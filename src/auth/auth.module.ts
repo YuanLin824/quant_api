@@ -11,7 +11,7 @@ import { RefreshAuthGuard } from './guards/refresh-auth.guard'
 /**
  * 认证模块
  *
- * 双密钥方案：access 用 JWT_SECRET_KEY、refresh 用 JWT_REFRESH_SECRET_KEY。
+ * 双密钥方案：access 用 JWT_ACCESS_SECRET_KEY、refresh 用 JWT_REFRESH_SECRET_KEY。
  * JwtModule 不注册默认 secret——service 签发与 guard 验签均显式传入各自密钥，
  * 避免误用（如用 access 密钥签发 refresh）。JwtService 注册为 global 供全局注入；
  * 但使用 JwtAuthGuard / RefreshAuthGuard 仍需 import AuthModule（守卫要在

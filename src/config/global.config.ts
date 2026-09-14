@@ -35,13 +35,13 @@ export const GLOBAL_CONFIG = registerAs(CONFIG_MODULES.GLOBAL, (): IGlobalConfig
 
   // 启动时验证必需的环境变量
   if (!accessSecretKey) {
-    throw new Error('缺少必需的环境变量: JWT_SECRET_KEY')
+    throw new Error('缺少必需的环境变量: JWT_ACCESS_SECRET_KEY')
   }
   if (!refreshSecretKey) {
     throw new Error('缺少必需的环境变量: JWT_REFRESH_SECRET_KEY')
   }
   if (accessSecretKey === refreshSecretKey) {
-    throw new Error('JWT_SECRET_KEY 与 JWT_REFRESH_SECRET_KEY 不能相同')
+    throw new Error('JWT_ACCESS_SECRET_KEY 与 JWT_REFRESH_SECRET_KEY 不能相同')
   }
   if (accessSecretKey.length < 32 || refreshSecretKey.length < 32) {
     throw new Error('JWT 密钥长度必须至少 32 个字符')

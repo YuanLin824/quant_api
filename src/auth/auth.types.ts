@@ -3,7 +3,7 @@ import type { Request } from 'express'
 /**
  * JWT payload 结构
  *
- * 双密钥方案下，验签密钥（JWT_SECRET_KEY / JWT_REFRESH_SECRET_KEY）本身即区分令牌类型，
+ * 双密钥方案下，验签密钥（JWT_ACCESS_SECRET_KEY / JWT_REFRESH_SECRET_KEY）本身即区分令牌类型，
  * tokenType 保留作纵深防御：两密钥误配为相同值时它是唯一防线，兼 payload 自文档化。
  * access 无 jti（无状态），refresh 必带 jti（服务端白名单吊销依据）。
  */
