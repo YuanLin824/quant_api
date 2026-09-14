@@ -904,3 +904,123 @@ curl "http://localhost:3001/api/stock-sdk/kline/us/AAPL/signals?period=monthly" 
 curl "http://localhost:3001/api/stock-sdk/kline/cn/600519/signals?period=daily&startDate=20240101&endDate=20240131&maFast=5&maSlow=20" \
   -H "Authorization: Bearer <access_token>"
 ```
+
+---
+
+## 手动触发标的代码同步
+
+标的代码库由定时任务每天 **01:00（北京时间）** 自动同步 A 股 / 美股 / 港股 / 基金代码，
+此接口用于首次初始化或失败补跑。
+
+**请求**
+
+```
+POST /api/stock-sdk/symbols/sync
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**响应**
+
+```json
+{
+  "code": 200,
+  "message": "同步完成",
+  "data": {
+    "results": [
+      { "market": "cn", "total": 5412, "inserted": 3 },
+      { "market": "us", "total": 8231, "inserted": 0 },
+      { "market": "hk", "total": 2614, "inserted": 1 },
+      { "market": "fund", "total": 19820, "inserted": 0 }
+    ],
+    "durationMs": 8420
+  }
+}
+```
+
+> `inserted` 为本次**新增**条数。同步采用**增量更新**（`ON CONFLICT DO NOTHING`）：
+> 已存在的记录不会被修改，也不会删除已退市的历史记录。
+>
+> 各市场相互独立——单个市场失败只在该项的 `error` 字段体现，其余市场照常同步。
+
+**示例**
+
+```bash
+curl -X POST "http://localhost:3001/api/stock-sdk/symbols/sync" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## 查询标的代码
+
+**请求**
+
+```
+GET /api/stock-sdk/symbols
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**查询参数**
+
+| 参数   | 类型   | 必填 | 说明                                                        |
+| ------ | ------ | ---- | ----------------------------------------------------------- |
+| market | string | 否   | 市场：`cn` / `hk` / `us` / `fund`；不传则返回各市场数量统计 |
+
+**响应**
+
+传 `market` 时返回该市场的代码数组（升序）：
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": ["sh600000", "sh600004", "sh600006"]
+}
+```
+
+不传时返回各市场的代码数量：
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": { "cn": 5412, "us": 8231, "hk": 2614, "fund": 19820 }
+}
+```
+
+**代码格式**
+
+代码格式统一为「市场前缀 + 代码」，港股与美股在入库时做了规范化：
+
+| 市场 | 上游返回                      | 入库格式  |
+| ---- | ----------------------------- | --------- |
+| A 股 | `sh600000`（自带前缀）        | 原样      |
+| 美股 | `105.AAPL`（东财 secid 前缀） | `usAAPL`  |
+| 港股 | `00700`（纯数字）             | `hk00700` |
+| 基金 | `005827`                      | 原样      |
+
+> 美股上游前缀为东财 secid 市场码：`105`=NASDAQ、`106`=NYSE、`107`=AMEX，统一归一化为 `us`。
+
+**示例**
+
+```bash
+# 各市场数量统计
+curl "http://localhost:3001/api/stock-sdk/symbols" \
+  -H "Authorization: Bearer <access_token>"
+
+# A 股代码列表
+curl "http://localhost:3001/api/stock-sdk/symbols?market=cn" \
+  -H "Authorization: Bearer <access_token>"
+```

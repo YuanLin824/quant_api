@@ -6,7 +6,7 @@
 - **AppSetup** (`src/app.setup.ts`) — 应用公共装配（Helmet / CORS / 全局前缀 / 校验管道），由 `main.ts` 与 e2e 测试共用，避免测试环境与线上配置漂移
 - **AuthModule** (`src/auth/`) — 认证模块，JWT 双密钥方案（access + refresh token）
 - **StockApiModule** (`src/stock-api/`) — 股票行情模块，基于 `stock-api` 库，`stocks.auto` 在 tencent → sina → eastmoney 间自动兜底
-- **StockSdkModule** (`src/stock-sdk/`) — 股票行情模块，基于 `stock-sdk` 库，提供行情 / K线（含技术指标） / 信号 / 大单 / 代码列表，支持 A 股/港股/美股/基金
+- **StockSdkModule** (`src/stock-sdk/`) — 股票行情模块，基于 `stock-sdk` 库，提供行情 / K线（含技术指标） / 信号 / 大单 / 代码列表，支持 A 股/港股/美股/基金；另含每日同步标的代码的定时任务（`symbols/` 子目录）
 - **PostgresModule** (`src/database/postgres.module.ts`) — TypeORM 数据源配置
 - **RedisModule** (`src/database/redis.module.ts`) — ioredis 连接管理
 
@@ -35,6 +35,11 @@
 9. **异常统一收口**: 全局 `AllExceptionsFilter` 将 HttpException、TypeORM `QueryFailedError`（按 PostgreSQL 错误码映射）及未知异常统一为 `{ code, data, message }`，并记录含客户端 IP 的结构化日志。
 
 10. **信号默认回溯窗口**: `GET /stock-sdk/kline/:market/:code/signals` 未传 `startDate` 时按 `period` 套用默认窗口（日线 1 月 / 周线 6 月 / 月线 36 月），避免默认扫描全历史。基准时间取 `endDate`（若提供）或当前时间，保证窗口不会落在查询区间之外。
+
+11. **每日标的代码同步**: `StockSymbolScheduler` 每天 01:00 触发（`@Cron` 显式指定 `timeZone: 'Asia/Shanghai'`——容器多为 UTC，不指定会让凌晨 1 点变成北京时间上午 9 点），把 A股/美股/港股/基金代码同步到 `stock_symbols` 表。
+    - **增量更新**：用 `INSERT ... ON CONFLICT DO NOTHING`（TypeORM 的 `orIgnore()`）而非「先查后插」——一次往返、无竞态，也避免为数千条代码逐条查询；已存在的不修改，也不删除退市记录
+    - **各市场相互独立**：单个失败只记录并继续，下次任务自然补上
+    - **异常自洽**：任务内全量 try/catch，绝不向调度器抛出——全局异常过滤器依赖 HTTP 上下文（`host.switchToHttp()`），捕获 cron 异常会在过滤器内二次报错
 
 ## 日志
 

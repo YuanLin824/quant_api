@@ -1,6 +1,7 @@
 import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { APP_FILTER, APP_GUARD } from '@nestjs/core'
+import { ScheduleModule } from '@nestjs/schedule'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { resolve } from 'path'
 import { AppController } from './app.controller'
@@ -40,6 +41,8 @@ import { StockSdkModule } from './stock-sdk/stock-sdk.module'
         limit: 100, // 最多 100 次请求
       },
     ]),
+    // 定时任务：ScheduleModule 的探索器会全局扫描各模块的 @Cron，子模块无需再 import
+    ScheduleModule.forRoot(),
     PostgresModule,
     RedisModule,
     AuthModule,

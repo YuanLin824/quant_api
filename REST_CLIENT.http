@@ -340,3 +340,37 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 ### Stock SDK - 获取基金代码列表
 GET {{baseUrl}}/stock-sdk/codes/fund
 Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### ========== Stock SDK 标的代码接口 ==========
+# 定时任务每天 01:00 自动同步各市场代码；以下用于手动触发与查询
+
+
+### 标的代码 - 手动触发同步（首次初始化 / 失败补跑）
+POST {{baseUrl}}/stock-sdk/symbols/sync
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 标的代码 - 各市场数量统计
+GET {{baseUrl}}/stock-sdk/symbols
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 标的代码 - A股列表
+GET {{baseUrl}}/stock-sdk/symbols?market=cn
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 标的代码 - 美股列表
+GET {{baseUrl}}/stock-sdk/symbols?market=us
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 标的代码 - 港股列表
+GET {{baseUrl}}/stock-sdk/symbols?market=hk
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 标的代码 - 基金列表
+GET {{baseUrl}}/stock-sdk/symbols?market=fund
+Authorization: Bearer {{login.response.body.data.accessToken}}
