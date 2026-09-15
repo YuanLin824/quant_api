@@ -7,7 +7,7 @@ import { StockSymbolService } from './stock-symbol.service'
 /**
  * 标的代码控制器
  *
- * 定时任务每天 01:00 自动同步，这两个接口用于手动触发与查询结果。
+ * 定时任务每天 09:00（开盘前）自动同步，这两个接口用于手动触发与查询结果。
  */
 @Controller('stock-sdk/symbols')
 @UseGuards(JwtAuthGuard)

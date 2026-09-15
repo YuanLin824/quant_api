@@ -1,12 +1,12 @@
-/** 定时同步标的代码任务的 cron 表达式（6 字段含秒）：每天 01:00:00 */
-export const STOCK_SYMBOL_SYNC_CRON = '0 0 1 * * *'
+/** 定时同步标的代码任务的 cron 表达式（6 字段含秒）：每天 09:00:00（开盘前） */
+export const STOCK_SYMBOL_SYNC_CRON = '0 0 9 * * *'
 
 /** 定时任务名称 */
 export const STOCK_SYMBOL_SYNC_JOB_NAME = 'stock-symbol-sync'
 
 /**
  * 定时任务时区——不可省：容器多为 UTC，
- * 不指定会让「凌晨 1 点」变成北京时间上午 9 点（开盘时分）
+ * 不指定会与北京时间的「早上 9 点」相差 8 小时
  */
 export const STOCK_SYMBOL_TIMEZONE = 'Asia/Shanghai'
 
