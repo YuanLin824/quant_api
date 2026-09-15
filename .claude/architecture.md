@@ -7,6 +7,7 @@
 - **AuthModule** (`src/auth/`) — 认证模块，JWT 双密钥方案（access + refresh token）
 - **StockApiModule** (`src/stock-api/`) — 股票行情模块，基于 `stock-api` 库，`stocks.auto` 在 tencent → sina → eastmoney 间自动兜底
 - **StockSdkModule** (`src/stock-sdk/`) — 股票行情模块，基于 `stock-sdk` 库，提供行情 / K线（含技术指标） / 信号 / 大单 / 代码列表，支持 A 股/港股/美股/基金；另含四个每日定时任务：标的代码同步（`symbols/`）、个股资金流排名（`fund-flows/`）、大盘资金流（`market-flows/`）、板块资金流（`sectors/`）
+- **TdxModule** (`src/tdx/`) — 通达信行情模块，基于 `node-tdx-market`（通达信 TCP 协议），提供 K线 / 五档盘口（批量） / 当日与历史分时 / 当日与历史分笔成交 / 证券数量 / 全量证券列表
 - **PostgresModule** (`src/database/postgres.module.ts`) — TypeORM 数据源配置
 - **RedisModule** (`src/database/redis.module.ts`) — ioredis 连接管理
 
@@ -60,6 +61,12 @@
     - 唯一键只有 `trade_date`——大盘是沪深两市合计口径，每个交易日仅一条记录
 
 > 四个定时任务的时间：标的代码 09:00（开盘前）、个股资金流 16:00、大盘资金流 16:30、板块资金流 17:00——均在开盘前或 A 股收盘后，互不重叠。
+
+15. **通达信行情模块**: `TdxModule` (`src/tdx/`) 基于 `node-tdx-market`（通达信 TCP 协议）提供 8 个查询接口。
+    - **长连接管理**：与服务端维持一条 TCP 长连接（区别于其它模块的 HTTP 库）。启动时主动建连但**不阻塞应用启动**——行情服务不可达只记 warn；请求前检查连接状态（懒连接兜底），断线重连由库的 `autoReconnect` 负责；模块销毁时断开
+    - **价格单位为厘（元 × 1000）**：上游解析结果**原样透传**，不在网关层做字段级换算——价格字段散布在 8 类响应中，逐个转换容易遗漏，改由文档显著说明
+    - **连接不可用时返回 503**（而非 500）：区分「依赖服务不可用」与「服务内部错误」
+    - **不使用库的 `KlineCategory`**：它是 `declare const enum`，与 tsconfig 的 `isolatedModules: true` 冲突（值位置不可用），改用 `tdx.constants.ts` 的数值映射表，对调用方暴露 `1m`/`day`/`week` 等语义化取值
 
 ## 日志
 

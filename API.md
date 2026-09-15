@@ -9,6 +9,7 @@
 - [认证接口](./docs/auth.md)
 - [Stock API 接口](./docs/stock-api.md)
 - [Stock SDK 接口](./docs/stock-sdk.md)
+- [通达信（TDX）接口](./docs/tdx.md)
 - [系统配置](./docs/config.md)
 
 ## 基础信息
@@ -20,12 +21,13 @@
 
 ## 认证与限流
 
-| 接口分组  | 路径前缀         | 认证要求                                   | 限流              |
-| --------- | ---------------- | ------------------------------------------ | ----------------- |
-| 健康检查  | `/api/health`    | 否                                         | 全局 60 秒 100 次 |
-| 认证接口  | `/api/auth`      | 各接口不同，详见[认证接口](./docs/auth.md) | 各接口独立配置    |
-| Stock API | `/api/stock-api` | 是（access token）                         | 不限流            |
-| Stock SDK | `/api/stock-sdk` | 是（access token）                         | 不限流            |
+| 接口分组   | 路径前缀         | 认证要求                                   | 限流              |
+| ---------- | ---------------- | ------------------------------------------ | ----------------- |
+| 健康检查   | `/api/health`    | 否                                         | 全局 60 秒 100 次 |
+| 认证接口   | `/api/auth`      | 各接口不同，详见[认证接口](./docs/auth.md) | 各接口独立配置    |
+| Stock API  | `/api/stock-api` | 是（access token）                         | 不限流            |
+| Stock SDK  | `/api/stock-sdk` | 是（access token）                         | 不限流            |
+| 通达信 TDX | `/api/tdx`       | 是（access token）                         | 不限流            |
 
 受保护接口统一通过请求头携带令牌：
 

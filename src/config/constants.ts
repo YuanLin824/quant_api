@@ -37,5 +37,9 @@ export const ENV_KEYS = {
   REDIS_URL: 'REDIS_URL',
   REDIS_KEY_PREFIX: 'REDIS_KEY_PREFIX',
 
+  // 通达信行情（TDX）
+  TDX_HOST: 'TDX_HOST',
+  TDX_PORT: 'TDX_PORT',
+
   CRYPTO_PROXY: 'CRYPTO_PROXY',
 } as const

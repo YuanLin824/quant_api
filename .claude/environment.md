@@ -44,6 +44,8 @@ JWT_REFRESH_EXPIRES_IN="7d"   # 默认 7 天，支持 s/m/h/d 单位
 AUTH_MAX_DEVICES="5"          # 默认 5 个设备
 REDIS_KEY_PREFIX="quant-"     # Redis key 前缀
 ALLOWED_ORIGINS="https://example.com"  # 生产环境必须配置，否则启动失败；多个用逗号分隔
+TDX_HOST="119.147.212.81"              # 通达信行情服务器 IP，留空则自动测速选最快
+TDX_PORT="7709"                        # 通达信行情服务器端口，默认 7709
 CRYPTO_PROXY="http://127.0.0.1:7890"   # 预留：加密数据采集代理，当前代码未使用
 ```
 

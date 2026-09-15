@@ -479,3 +479,64 @@ GET {{baseUrl}}/stock-sdk/market-flows
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
+### ========== 通达信 TDX 接口 ==========
+# 直连通达信行情服务器；注意：价格字段单位为「厘」(元 × 1000)
+
+
+### TDX - 获取K线（日线，最近 100 根）
+GET {{baseUrl}}/tdx/kline/600036?period=day&count=100
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### TDX - 获取K线（周线）
+GET {{baseUrl}}/tdx/kline/600036?period=week&count=50
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### TDX - 批量获取五档盘口
+POST {{baseUrl}}/tdx/quotes
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "codes": [
+    "600036",
+    "000001",
+    "sh601318"
+  ]
+}
+
+
+### TDX - 获取当日分时
+GET {{baseUrl}}/tdx/minute/600036
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### TDX - 获取历史分时
+GET {{baseUrl}}/tdx/minute/600036/history?date=20260914
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### TDX - 获取当日分笔成交
+GET {{baseUrl}}/tdx/trade/600036?count=50
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### TDX - 获取历史分笔成交
+GET {{baseUrl}}/tdx/trade/600036/history?date=20260914&count=50
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### TDX - 获取上海证券交易所证券数量
+GET {{baseUrl}}/tdx/stocks/sh/count
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### TDX - 获取深圳证券交易所证券数量
+GET {{baseUrl}}/tdx/stocks/sz/count
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### TDX - 获取上海证券交易所全量证券列表（自动分页，响应较大）
+GET {{baseUrl}}/tdx/stocks/sh
+Authorization: Bearer {{login.response.body.data.accessToken}}

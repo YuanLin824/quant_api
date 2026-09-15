@@ -16,6 +16,7 @@ import { RedisModule } from './database/redis.module'
 import { RedisService } from './database/redis.service'
 import { StockApiModule } from './stock-api/stock-api.module'
 import { StockSdkModule } from './stock-sdk/stock-sdk.module'
+import { TdxModule } from './tdx/tdx.module'
 
 // @Global() 使本模块的 providers/exports 在所有子模块中可直接注入，无需重复 import
 @Global()
@@ -48,6 +49,7 @@ import { StockSdkModule } from './stock-sdk/stock-sdk.module'
     AuthModule,
     StockApiModule,
     StockSdkModule,
+    TdxModule,
   ],
 
   controllers: [AppController],
