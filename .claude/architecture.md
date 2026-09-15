@@ -6,7 +6,7 @@
 - **AppSetup** (`src/app.setup.ts`) — 应用公共装配（Helmet / CORS / 全局前缀 / 校验管道），由 `main.ts` 与 e2e 测试共用，避免测试环境与线上配置漂移
 - **AuthModule** (`src/auth/`) — 认证模块，JWT 双密钥方案（access + refresh token）
 - **StockApiModule** (`src/stock-api/`) — 股票行情模块，基于 `stock-api` 库，`stocks.auto` 在 tencent → sina → eastmoney 间自动兜底
-- **StockSdkModule** (`src/stock-sdk/`) — 股票行情模块，基于 `stock-sdk` 库，提供行情 / K线（含技术指标） / 信号 / 大单 / 代码列表，支持 A 股/港股/美股/基金；另含每日同步标的代码的定时任务（`symbols/` 子目录）
+- **StockSdkModule** (`src/stock-sdk/`) — 股票行情模块，基于 `stock-sdk` 库，提供行情 / K线（含技术指标） / 信号 / 大单 / 代码列表，支持 A 股/港股/美股/基金；另含四个每日定时任务：标的代码同步（`symbols/`）、个股资金流排名（`fund-flows/`）、大盘资金流（`market-flows/`）、板块资金流（`sectors/`）
 - **PostgresModule** (`src/database/postgres.module.ts`) — TypeORM 数据源配置
 - **RedisModule** (`src/database/redis.module.ts`) — ioredis 连接管理
 
@@ -36,10 +36,30 @@
 
 10. **信号默认回溯窗口**: `GET /stock-sdk/kline/:market/:code/signals` 未传 `startDate` 时按 `period` 套用默认窗口（日线 1 月 / 周线 6 月 / 月线 36 月），避免默认扫描全历史。基准时间取 `endDate`（若提供）或当前时间，保证窗口不会落在查询区间之外。
 
-11. **每日标的代码同步**: `StockSymbolScheduler` 每天 01:00 触发（`@Cron` 显式指定 `timeZone: 'Asia/Shanghai'`——容器多为 UTC，不指定会让凌晨 1 点变成北京时间上午 9 点），把 A股/美股/港股/基金代码同步到 `stock_symbols` 表。
+11. **每日标的代码同步**: `StockSymbolScheduler` 每天 09:00（开盘前）触发（`@Cron` 显式指定 `timeZone: 'Asia/Shanghai'`——容器多为 UTC，不指定会相差 8 小时），把 A股/美股/港股/基金代码同步到 `stock_symbols` 表。
     - **增量更新**：用 `INSERT ... ON CONFLICT DO NOTHING`（TypeORM 的 `orIgnore()`）而非「先查后插」——一次往返、无竞态，也避免为数千条代码逐条查询；已存在的不修改，也不删除退市记录
     - **各市场相互独立**：单个失败只记录并继续，下次任务自然补上
     - **异常自洽**：任务内全量 try/catch，绝不向调度器抛出——全局异常过滤器依赖 HTTP 上下文（`host.switchToHttp()`），捕获 cron 异常会在过滤器内二次报错
+
+12. **每日板块资金流采集**: `SectorFlowScheduler` 每天 17:00（时区同上，A 股收盘后）通过 `fundFlow.sectorRank` 采集板块资金流排名，写入 `sector_fund_flows`，保留最近一个月。
+    - **数据归属日**：下午 5 点当天已收盘、数据完整，故交易日归属当天；非交易日（周末/节假日）归属之前最近的交易日
+    - **唯一键含板块类型与排名周期** `(trade_date, sector_type, indicator, code)`：同一交易日可按行业/概念/地域与不同周期分别采集，互不覆盖
+    - **空数据保护**：上游返回空数组时跳过落库，避免把已有记录清成空
+    - 落库为覆盖式（先删同批再写），保留原始净额与净占比字段，便于事后回溯
+
+13. **每日个股资金流排名采集**: `StockFundFlowScheduler` 每天 16:00（时区同上，A 股收盘后）通过 `fundFlow.rank` 采集全市场个股资金流排名，写入 `stock_fund_flows`，保留最近一个月。
+    - **落库用分批 insert**（每批 1000 条）而非逐条 save：单日数据为全市场数千条，逐条 save 会生成数千次 SQL
+    - **查询强制分页**（默认 50 条/页，上限 200）：整批返回会造成数百 KB 的响应体，与板块接口（约 86 条，可整批返回）的处理方式不同
+    - 表内保留各单类（超大/大/中/小）的净额与净占比，便于分析资金结构
+    - 数据归属日、覆盖式落库、空数据保护与清理策略同板块任务
+
+14. **每日大盘资金流采集**: `MarketFundFlowScheduler` 每天 16:30（时区同上，A 股收盘后）通过 `fundFlow.market` 采集沪深大盘资金流，写入 `market_fund_flows`，保留最近一个月。
+    - 上游返回的是**按日历史序列**（每条自带 `date`），故日期取自数据本身，无需按运行时推导——与其它三个任务不同
+    - **只写入保留期内的数据**：更早的写入后也会被清理，没必要先写一遍
+    - **增量插入**（`ON CONFLICT DO NOTHING`）而非覆盖式重写：已收盘交易日的历史值不会变动，每天实际新增 1 条
+    - 唯一键只有 `trade_date`——大盘是沪深两市合计口径，每个交易日仅一条记录
+
+> 四个定时任务的时间：标的代码 09:00（开盘前）、个股资金流 16:00、大盘资金流 16:30、板块资金流 17:00——均在开盘前或 A 股收盘后，互不重叠。
 
 ## 日志
 

@@ -343,7 +343,7 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
 ### ========== Stock SDK 标的代码接口 ==========
-# 定时任务每天 01:00 自动同步各市场代码；以下用于手动触发与查询
+# 定时任务每天 09:00（开盘前）自动同步各市场代码；以下用于手动触发与查询
 
 
 ### 标的代码 - 手动触发同步（首次初始化 / 失败补跑）
@@ -374,3 +374,108 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 ### 标的代码 - 基金列表
 GET {{baseUrl}}/stock-sdk/symbols?market=fund
 Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### ========== Stock SDK 板块资金流接口 ==========
+# 定时任务每天 17:00（收盘后）自动采集行业板块；以下用于手动触发与查询
+
+
+### 板块资金流 - 手动触发采集（默认行业板块 / 当日）
+POST {{baseUrl}}/stock-sdk/sectors/sync
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 板块资金流 - 采集概念板块的 5 日资金流
+POST {{baseUrl}}/stock-sdk/sectors/sync
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "sectorType": "concept",
+  "indicator": "5day"
+}
+
+
+### 板块资金流 - 演练（只取数不落库）
+POST {{baseUrl}}/stock-sdk/sectors/sync
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "dryRun": true
+}
+
+
+### 板块资金流 - 查询最近一批
+GET {{baseUrl}}/stock-sdk/sectors
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 板块资金流 - 查询指定交易日
+GET {{baseUrl}}/stock-sdk/sectors?date=2026-09-11&sectorType=industry
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### ========== Stock SDK 个股资金流接口 ==========
+# 定时任务每天 16:00（收盘后）自动采集；以下用于手动触发与查询
+
+
+### 个股资金流 - 手动触发采集（默认当日，全市场数千条）
+POST {{baseUrl}}/stock-sdk/fund-flows/sync
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 个股资金流 - 采集 5 日排名
+POST {{baseUrl}}/stock-sdk/fund-flows/sync
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "indicator": "5day"
+}
+
+
+### 个股资金流 - 演练（只取数不落库）
+POST {{baseUrl}}/stock-sdk/fund-flows/sync
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "dryRun": true
+}
+
+
+### 个股资金流 - 查询最近一批（前 50 名）
+GET {{baseUrl}}/stock-sdk/fund-flows
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 个股资金流 - 分页查询指定交易日
+GET {{baseUrl}}/stock-sdk/fund-flows?date=2026-09-14&page=2&pageSize=100
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### ========== Stock SDK 大盘资金流接口 ==========
+# 定时任务每天 16:30（收盘后）自动采集；以下用于手动触发与查询
+
+
+### 大盘资金流 - 手动触发采集
+POST {{baseUrl}}/stock-sdk/market-flows/sync
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 大盘资金流 - 演练（只取数不落库）
+POST {{baseUrl}}/stock-sdk/market-flows/sync
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "dryRun": true
+}
+
+
+### 大盘资金流 - 查询最近一个月
+GET {{baseUrl}}/stock-sdk/market-flows
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+

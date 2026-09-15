@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common'
-import type { FundQuote, SearchResult } from 'stock-sdk'
+import type {
+  FundQuote,
+  MarketFundFlow as MarketFundFlowItem,
+  SearchResult,
+  SectorFundFlowItem,
+} from 'stock-sdk'
 import { StockSDK } from 'stock-sdk'
 import { KlinePeriod } from './dto/constants'
 import {
@@ -361,5 +366,45 @@ export class StockSdkService {
     }
 
     return this.sdk.kline.signals(code, options as any)
+  }
+
+  /**
+   * 获取板块资金流排名
+   *
+   * @param indicator 排名周期 (today/3day/5day/10day)
+   * @param sectorType 板块类型 (industry 行业 / concept 概念 / region 地域)
+   */
+  async getSectorFundFlowRank(
+    indicator: 'today' | '3day' | '5day' | '10day' = 'today',
+    sectorType: 'industry' | 'concept' | 'region' = 'industry'
+  ): Promise<SectorFundFlowItem[]> {
+    this.logger.log(`获取板块资金流排名: ${sectorType}/${indicator}`)
+
+    return this.sdk.fundFlow.sectorRank({ indicator, sectorType })
+  }
+
+  /** 获取全量交易日列表（升序 YYYY-MM-DD，SDK 内 12 小时缓存） */
+  async getTradingCalendar(): Promise<string[]> {
+    return this.sdk.reference.tradingCalendar()
+  }
+
+  /**
+   * 获取个股资金流排名（全市场，单次调用覆盖）
+   *
+   * 返回数千条，SDK 内部自动翻页；调用方注意落库时用批量插入。
+   *
+   * @param indicator 排名周期 (today/3day/5day/10day)
+   */
+  async getFundFlowRank(indicator: 'today' | '3day' | '5day' | '10day' = 'today') {
+    this.logger.log(`获取个股资金流排名: ${indicator}`)
+
+    return this.sdk.fundFlow.rank({ indicator })
+  }
+
+  /** 获取大盘资金流（沪深两市合计，返回按日的历史序列） */
+  async getMarketFundFlow(): Promise<MarketFundFlowItem[]> {
+    this.logger.log('获取大盘资金流')
+
+    return this.sdk.fundFlow.market()
   }
 }

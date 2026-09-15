@@ -909,7 +909,7 @@ curl "http://localhost:3001/api/stock-sdk/kline/cn/600519/signals?period=daily&s
 
 ## 手动触发标的代码同步
 
-标的代码库由定时任务每天 **01:00（北京时间）** 自动同步 A 股 / 美股 / 港股 / 基金代码，
+标的代码库由定时任务每天 **09:00（北京时间，开盘前）** 自动同步 A 股 / 美股 / 港股 / 基金代码，
 此接口用于首次初始化或失败补跑。
 
 **请求**
@@ -1022,5 +1022,427 @@ curl "http://localhost:3001/api/stock-sdk/symbols" \
 
 # A 股代码列表
 curl "http://localhost:3001/api/stock-sdk/symbols?market=cn" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## 手动触发板块资金流采集
+
+板块资金流排名由定时任务每天 **17:00（北京时间，A 股收盘后）** 自动采集。此接口用于首次初始化、补跑，
+或采集其他板块类型 / 排名周期。
+
+**请求**
+
+```
+POST /api/stock-sdk/sectors/sync
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**请求体**
+
+| 参数       | 类型    | 必填 | 说明                                                                           |
+| ---------- | ------- | ---- | ------------------------------------------------------------------------------ |
+| tradeDate  | string  | 否   | 数据所属交易日（YYYYMMDD 或 YYYY-MM-DD）；不传则取最近一个已完成交易日         |
+| sectorType | string  | 否   | 板块类型：`industry`(行业) / `concept`(概念) / `region`(地域)，默认 `industry` |
+| indicator  | string  | 否   | 排名周期：`today` / `3day` / `5day` / `10day`，默认 `today`                    |
+| dryRun     | boolean | 否   | 只取数不落库，用于验证                                                         |
+
+**响应**
+
+```json
+{
+  "code": 200,
+  "message": "执行完成",
+  "data": {
+    "tradeDate": "2026-09-11",
+    "sectorType": "industry",
+    "indicator": "today",
+    "total": 86,
+    "persisted": true,
+    "purged": 0,
+    "durationMs": 1240
+  }
+}
+```
+
+> 上游返回空数据时会**跳过落库**（不覆盖已有记录），此时 `persisted` 为 `false`。
+
+**示例**
+
+```bash
+# 采集默认类型（行业板块 / 当日）
+curl -X POST "http://localhost:3001/api/stock-sdk/sectors/sync" \
+  -H "Authorization: Bearer <access_token>"
+
+# 采集概念板块的 5 日资金流，并指定日期
+curl -X POST "http://localhost:3001/api/stock-sdk/sectors/sync" \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"sectorType": "concept", "indicator": "5day", "tradeDate": "2026-09-11"}'
+```
+
+---
+
+## 查询板块资金流
+
+**请求**
+
+```
+GET /api/stock-sdk/sectors
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**查询参数**
+
+| 参数       | 类型   | 必填 | 说明                               |
+| ---------- | ------ | ---- | ---------------------------------- |
+| date       | string | 否   | 数据所属交易日；不传则返回最近一批 |
+| sectorType | string | 否   | 板块类型过滤（仅在传 date 时生效） |
+
+**响应**
+
+传 `date` 时返回该日的记录数组（按排名升序）；不传时返回 `{ tradeDate, rows }`；无数据时为 `null`。
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "tradeDate": "2026-09-11",
+      "sectorType": "industry",
+      "indicator": "today",
+      "rank": 1,
+      "code": "BK0910",
+      "name": "半导体",
+      "changePercent": 3.2,
+      "mainNetInflow": 890000000,
+      "mainNetInflowPercent": 6.8,
+      "superLargeNetInflow": 610000000,
+      "largeNetInflow": 280000000,
+      "mediumNetInflow": 0,
+      "smallNetInflow": -890000000,
+      "topStockName": "中芯国际",
+      "topStockCode": "688981"
+    }
+  ]
+}
+```
+
+**响应字段说明**
+
+| 字段                 | 说明                       |
+| -------------------- | -------------------------- |
+| rank                 | 排名（与上游返回顺序一致） |
+| code                 | 板块代码（东财 BK 编号）   |
+| name                 | 板块名称                   |
+| changePercent        | 板块涨跌幅(%)              |
+| mainNetInflow        | 主力净流入净额(元)         |
+| mainNetInflowPercent | 主力净流入净占比(%)        |
+| superLargeNetInflow  | 超大单净额(元)             |
+| largeNetInflow       | 大单净额(元)               |
+| mediumNetInflow      | 中单净额(元)               |
+| smallNetInflow       | 小单净额(元)               |
+| topStockName / Code  | 板块内主力净流入最大股     |
+
+> 数值字段可能为 `null`（上游对无成交板块不返回）。
+>
+> 数据**保留最近一个月**，每个交易日一批。唯一键包含板块类型与排名周期，
+> 因此同一交易日可按 `industry`/`concept`/`region` 与不同 `indicator` 分别采集，互不覆盖。
+
+**示例**
+
+```bash
+# 最近一批
+curl "http://localhost:3001/api/stock-sdk/sectors" \
+  -H "Authorization: Bearer <access_token>"
+
+# 指定交易日与板块类型
+curl "http://localhost:3001/api/stock-sdk/sectors?date=2026-09-11&sectorType=industry" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## 手动触发个股资金流采集
+
+个股资金流排名由定时任务每天 **16:00（北京时间，A 股收盘后）** 自动采集。此接口用于首次初始化、
+补跑，或采集其他排名周期。
+
+**请求**
+
+```
+POST /api/stock-sdk/fund-flows/sync
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**请求体**
+
+| 参数      | 类型    | 必填 | 说明                                                                     |
+| --------- | ------- | ---- | ------------------------------------------------------------------------ |
+| tradeDate | string  | 否   | 数据所属交易日（YYYYMMDD 或 YYYY-MM-DD）；不传则取当天或之前最近的交易日 |
+| indicator | string  | 否   | 排名周期：`today` / `3day` / `5day` / `10day`，默认 `today`              |
+| dryRun    | boolean | 否   | 只取数不落库，用于验证                                                   |
+
+**响应**
+
+```json
+{
+  "code": 200,
+  "message": "执行完成",
+  "data": {
+    "tradeDate": "2026-09-14",
+    "indicator": "today",
+    "total": 5231,
+    "persisted": true,
+    "purged": 0,
+    "durationMs": 18200
+  }
+}
+```
+
+> ⚠️ 单次采集为**全市场数千条**，耗时明显长于板块接口；`dryRun` 也会真实发起上游请求。
+> 上游返回空数据时会跳过落库，此时 `persisted` 为 `false`。
+
+**示例**
+
+```bash
+curl -X POST "http://localhost:3001/api/stock-sdk/fund-flows/sync" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## 查询个股资金流排名
+
+**请求**
+
+```
+GET /api/stock-sdk/fund-flows
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**查询参数**
+
+| 参数      | 类型   | 必填 | 说明                               |
+| --------- | ------ | ---- | ---------------------------------- |
+| date      | string | 否   | 数据所属交易日；不传则返回最近一批 |
+| indicator | string | 否   | 排名周期过滤                       |
+| page      | number | 否   | 页码，默认 1                       |
+| pageSize  | number | 否   | 每页条数，默认 50，最大 200        |
+
+**响应**
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "tradeDate": "2026-09-14",
+    "indicator": "today",
+    "total": 5231,
+    "rows": [
+      {
+        "rank": 1,
+        "code": "sh600519",
+        "name": "贵州茅台",
+        "price": 1720.0,
+        "changePercent": 2.1,
+        "mainNetInflow": 890000000,
+        "mainNetInflowPercent": 8.2,
+        "superLargeNetInflow": 610000000,
+        "superLargeNetInflowPercent": 5.6,
+        "largeNetInflow": 280000000,
+        "largeNetInflowPercent": 2.6,
+        "mediumNetInflow": -300000000,
+        "mediumNetInflowPercent": -2.8,
+        "smallNetInflow": -590000000,
+        "smallNetInflowPercent": -5.4
+      }
+    ]
+  }
+}
+```
+
+**响应字段说明**
+
+| 字段                         | 说明                                  |
+| ---------------------------- | ------------------------------------- |
+| rank                         | 排名（与上游返回顺序一致）            |
+| code / name / price          | 代码 / 名称 / 最新价                  |
+| changePercent                | 涨跌幅(%)，**对应排名周期**（非单日） |
+| mainNetInflow(Percent)       | 主力净流入净额(元) / 净占比(%)        |
+| superLargeNetInflow(Percent) | 超大单净额 / 净占比                   |
+| largeNetInflow(Percent)      | 大单净额 / 净占比                     |
+| mediumNetInflow(Percent)     | 中单净额 / 净占比                     |
+| smallNetInflow(Percent)      | 小单净额 / 净占比                     |
+
+> 数值字段可能为 `null`（上游对部分标的返回空值）。
+>
+> 与板块接口不同，**查询强制分页**——单日数据为全市场个股（数千条），
+> 直接返回整批会造成数百 KB 的响应。`total` 为该批次总数，不受分页影响。
+>
+> 数据**保留最近一个月**，每个交易日一批。
+
+**示例**
+
+```bash
+# 最近一批（前 50 名）
+curl "http://localhost:3001/api/stock-sdk/fund-flows" \
+  -H "Authorization: Bearer <access_token>"
+
+# 指定交易日，取第 2 页
+curl "http://localhost:3001/api/stock-sdk/fund-flows?date=2026-09-14&page=2&pageSize=100" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## 手动触发大盘资金流采集
+
+大盘资金流由定时任务每天 **16:30（北京时间，A 股收盘后）** 自动采集。此接口用于首次初始化或补跑。
+
+**请求**
+
+```
+POST /api/stock-sdk/market-flows/sync
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**请求体**
+
+| 参数   | 类型    | 必填 | 说明         |
+| ------ | ------- | ---- | ------------ |
+| dryRun | boolean | 否   | 只取数不落库 |
+
+> 无需指定日期——上游返回的是**按日历史序列**，日期取自数据本身。
+
+**响应**
+
+```json
+{
+  "code": 200,
+  "message": "执行完成",
+  "data": {
+    "upstreamTotal": 1250,
+    "inRetention": 22,
+    "inserted": 1,
+    "purged": 1,
+    "persisted": true,
+    "durationMs": 860
+  }
+}
+```
+
+> `upstreamTotal` 是上游返回的总条数（含保留期之外的历史），`inRetention` 是保留期内的条数。
+> 只写入保留期内的数据——更早的写入后也会被清理，没必要先写一遍。
+> `inserted` 为本次新增（已存在的日期会跳过，历史值不会变动）。
+
+**示例**
+
+```bash
+curl -X POST "http://localhost:3001/api/stock-sdk/market-flows/sync" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## 查询大盘资金流
+
+**请求**
+
+```
+GET /api/stock-sdk/market-flows
+Authorization: Bearer <access_token>
+```
+
+**请求头**
+
+| 参数          | 类型   | 必填 | 说明                  |
+| ------------- | ------ | ---- | --------------------- |
+| Authorization | string | 是   | Bearer + access_token |
+
+**响应**
+
+返回最近一个月的记录（按日期升序）；无数据时返回空数组。
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": [
+    {
+      "tradeDate": "2026-09-14",
+      "shClose": 3210.5,
+      "shChangePercent": 0.68,
+      "szClose": 10520.3,
+      "szChangePercent": 0.92,
+      "mainNetInflow": -5200000000,
+      "mainNetInflowPercent": -1.24,
+      "superLargeNetInflow": -3100000000,
+      "superLargeNetInflowPercent": -0.74,
+      "largeNetInflow": -2100000000,
+      "largeNetInflowPercent": -0.5,
+      "mediumNetInflow": 1100000000,
+      "mediumNetInflowPercent": 0.26,
+      "smallNetInflow": 4100000000,
+      "smallNetInflowPercent": 0.98
+    }
+  ]
+}
+```
+
+**响应字段说明**
+
+| 字段                         | 说明                           |
+| ---------------------------- | ------------------------------ |
+| tradeDate                    | 数据日期（取自上游，非运行时） |
+| shClose / shChangePercent    | 上证指数收盘价 / 涨跌幅(%)     |
+| szClose / szChangePercent    | 深证指数收盘价 / 涨跌幅(%)     |
+| mainNetInflow(Percent)       | 主力净流入净额(元) / 净占比(%) |
+| superLargeNetInflow(Percent) | 超大单净额 / 净占比            |
+| largeNetInflow(Percent)      | 大单净额 / 净占比              |
+| mediumNetInflow(Percent)     | 中单净额 / 净占比              |
+| smallNetInflow(Percent)      | 小单净额 / 净占比              |
+
+> 数值字段可能为 `null`。数据**保留最近一个月**（每天一条，大盘为沪深合计口径）。
+> 查询接口不需要分页——一个月约 20 个交易日。
+
+**示例**
+
+```bash
+curl "http://localhost:3001/api/stock-sdk/market-flows" \
   -H "Authorization: Bearer <access_token>"
 ```
