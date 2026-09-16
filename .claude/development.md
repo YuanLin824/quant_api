@@ -56,7 +56,8 @@ API 文档位于项目根目录和 `docs` 目录：
 - `docs/health.md` — 健康检查接口
 - `docs/auth.md` — 认证接口（注册、登录、刷新、登出、用户信息、修改密码、登出所有设备）
 - `docs/stock-api.md` — Stock API 接口（行情、K线、搜索）
-- `docs/stock-sdk.md` — Stock SDK 接口（行情、基金、批量行情、K线、K线信号、大单、代码列表、搜索）
+- `docs/stock-sdk.md` — Stock SDK 接口（行情、基金、批量行情、K线、K线信号、大单、代码列表、搜索，以及标的代码同步与三类资金流采集的定时任务）
+- `docs/tdx.md` — 通达信接口（K线、五档盘口、当日与历史分时、当日与历史分笔成交、证券数量与列表）
 - `docs/config.md` — 系统配置（认证机制、环境变量、开发环境）
 
 > `docs/` 下每个文档顶部均有返回 `API.md` 的导航链接。

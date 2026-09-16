@@ -42,7 +42,7 @@
 | `POST /auth/change-password` | 每小时最多 5 次      |
 | `POST /auth/logout`          | 不限流               |
 | `POST /auth/logout-all`      | 不限流               |
-| Stock API / Stock SDK        | 不限流               |
+| Stock API / Stock SDK / TDX  | 不限流               |
 
 > 触发限流返回 `429`；账号锁定返回 `403`，两者含义不同。
 
@@ -84,6 +84,10 @@ REDIS_KEY_PREFIX="quant-"
 
 # CORS 配置（生产环境必须，逗号分隔多个来源）
 ALLOWED_ORIGINS="https://example.com"
+
+# 通达信行情（可选，留空则自动测速选择最快的服务器）
+TDX_HOST="119.147.212.81"
+TDX_PORT="7709"
 ```
 
 > `NODE_ENV` 决定加载哪一组 `.env` 文件与是否开启数据库表结构自动同步，

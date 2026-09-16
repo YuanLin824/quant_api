@@ -6,10 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 量化交易系统 API，基于 NestJS 11 + TypeORM + PostgreSQL + Redis 构建。提供用户认证（JWT 双密钥方案）和股票行情查询（A股/港股/美股/基金）功能。
 
-行情数据由两个独立模块提供，二者底层库不同、接口互不替代：
+行情数据由三个独立模块提供，底层库与数据源各不相同、接口互不替代：
 
 - **StockApiModule** — 基于 `stock-api` 库，`stocks.auto` 在 tencent → sina → eastmoney 间自动兜底
-- **StockSdkModule** — 基于 `stock-sdk` 库，覆盖面更广（行情/K线/技术指标/信号/大单/代码列表）
+- **StockSdkModule** — 基于 `stock-sdk` 库，覆盖面更广（行情/K线/技术指标/信号/大单/代码列表），另含每日定时采集任务
+- **TdxModule** — 基于 `node-tdx-market`（通达信 TCP 协议）直连行情服务器，提供 K线/五档盘口/分时/分笔成交/证券列表
 
 ## 常用命令
 
