@@ -30,7 +30,11 @@
 {
   "code": 503,
   "message": "通达信行情服务器连接失败，请稍后重试",
-  "data": {}
+  "data": {
+    "message": "通达信行情服务器连接失败，请稍后重试",
+    "error": "Service Unavailable",
+    "statusCode": 503
+  }
 }
 ```
 

@@ -15,7 +15,7 @@
 ## 基础信息
 
 - **基础路径**: `/api`（由 `API_PREFIX` 环境变量控制）
-- **默认端口**: `3001`
+- **默认端口**: `3000`（`.env` 中由 `PORT` 覆盖，`.env.example` 的取值为 `3001`）
 - **响应格式**: JSON
 - **请求体大小限制**: 10KB
 
@@ -44,14 +44,15 @@ Authorization: Bearer <access_token>
 ```json
 {
   "code": 200,
-  "message": "操作成功",
+  "message": "获取成功",
   "data": { ... }
 }
 ```
 
 ### 错误响应
 
-`code` 与 HTTP 状态码保持一致，`data` 携带异常详情（无附加信息时为空对象 `{}`）：
+`code` 与 HTTP 状态码保持一致，`data` 携带 `HttpException.getResponse()` 的原始内容
+（非 `HttpException` 的未知异常才为空对象 `{}`）：
 
 ```json
 {
@@ -67,13 +68,17 @@ Authorization: Bearer <access_token>
 
 ### 参数校验失败
 
-DTO 校验失败时，`message` 为 NESTJS 默认文案，具体原因位于 `data` 数组中：
+DTO 校验失败时，`message` 为 NESTJS 默认文案，具体原因位于 `data.message` 数组中：
 
 ```json
 {
   "code": 400,
   "message": "Bad Request Exception",
-  "data": ["市场类型必须是 cn/hk/us", "股票代码不能为空"]
+  "data": {
+    "message": ["市场类型必须是 cn/hk/us/fund"],
+    "error": "Bad Request",
+    "statusCode": 400
+  }
 }
 ```
 
