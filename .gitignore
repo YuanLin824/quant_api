@@ -3,9 +3,10 @@
 /node_modules
 /build
 
-# WESTOCK 技能包自带的 Windows 二进制（3.1MB，入库会让仓库体积翻倍且无法增量压缩，
-# 可由 westock-data/scripts/setup.* 重新获取）
-westock-data/westock-data.exe
+# WESTOCK CLI 二进制（由 scripts/setup.* 下载到 scripts/，或技能包自带）。
+# 单个约 3.1MB，入库会让仓库体积翻倍且二进制无法增量压缩，故一律不入库
+*.exe
+/scripts/westock
 
 # Logs
 # winston 生产环境输出目录：按小时轮转，归档为 .gz（如 2026-09-11-10.info.log.gz），
