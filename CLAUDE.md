@@ -4,13 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-量化交易系统 API，基于 NestJS 11 + TypeORM + PostgreSQL + Redis 构建。提供用户认证（JWT 双密钥方案）和股票行情查询（A股/港股/美股/基金）功能。
+量化交易系统 API，基于 NestJS 11 + TypeORM + PostgreSQL + Redis 构建。提供用户认证（JWT 双密钥方案）和股票行情查询功能。
 
-行情数据由三个独立模块提供，底层库与数据源各不相同、接口互不替代：
-
-- **StockApiModule** — 基于 `stock-api` 库，`stocks.auto` 在 tencent → sina → eastmoney 间自动兜底
-- **StockSdkModule** — 基于 `stock-sdk` 库，覆盖面更广（行情/K线/技术指标/信号/大单/代码列表），另含每日定时采集任务
-- **TdxModule** — 基于 `node-tdx-market`（通达信 TCP 协议）直连行情服务器，提供 K线/五档盘口/分时/分笔成交/证券列表
+行情数据由 **TdxModule** 提供——基于 `node-tdx-market`（通达信 TCP 协议）直连行情服务器，提供 K线/五档盘口/分时/分笔成交/证券列表。
 
 ## 常用命令
 
@@ -56,8 +52,8 @@ npm run commit             # czg 交互式生成符合 commitlint 规范的提�
 - docker-compose 默认已执行过
 - 不自动启动任何服务，需要启动其他服务时，要进行授权确认
 - 模块的 dto 相关的放到 `模块/dto` 目录下，每个接口的 dto 对应一个文件；
-  共享的枚举/常量放 `dto/constants.ts`，组合校验装饰器放 `dto/validators.ts`，跨模块复用的装饰器放 `common/decorators/`
-- DTO 校验优先复用已有的组合装饰器（如 `IsCodeArray`、`IsSdkMarket`、`IsAdjustType`），避免在各 DTO 中重复堆砌校验装饰器
+  模块级共享的枚举/常量放 `模块/模块.constants.ts`，跨模块复用的校验装饰器放 `common/decorators/`
+- DTO 校验优先复用已有的组合装饰器（如 `IsCodeArray`），避免在各 DTO 中重复堆砌校验装饰器
 
 ## 更多文档
 

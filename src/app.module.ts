@@ -1,7 +1,6 @@
 import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { APP_FILTER, APP_GUARD } from '@nestjs/core'
-import { ScheduleModule } from '@nestjs/schedule'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { resolve } from 'path'
 import { AppController } from './app.controller'
@@ -14,8 +13,6 @@ import { GLOBAL_CONFIG } from './config/global.config'
 import { PostgresModule } from './database/postgres.module'
 import { RedisModule } from './database/redis.module'
 import { RedisService } from './database/redis.service'
-import { StockApiModule } from './stock-api/stock-api.module'
-import { StockSdkModule } from './stock-sdk/stock-sdk.module'
 import { TdxModule } from './tdx/tdx.module'
 
 // @Global() 使本模块的 providers/exports 在所有子模块中可直接注入，无需重复 import
@@ -24,6 +21,8 @@ import { TdxModule } from './tdx/tdx.module'
   imports: [
     ConfigModule.forRoot({
       cache: true,
+      // 展开 .env 中的 ${VAR} 占位符——.env.example 的 PG_URL / REDIS_URL 由分项变量拼接而成
+      expandVariables: true,
       isGlobal: true,
       // 使用绝对路径, 避免 CWD 不一致导致 .env 文件找不到 (静默失败不报错)
       envFilePath: [
@@ -42,13 +41,9 @@ import { TdxModule } from './tdx/tdx.module'
         limit: 100, // 最多 100 次请求
       },
     ]),
-    // 定时任务：ScheduleModule 的探索器会全局扫描各模块的 @Cron，子模块无需再 import
-    ScheduleModule.forRoot(),
     PostgresModule,
     RedisModule,
     AuthModule,
-    StockApiModule,
-    StockSdkModule,
     TdxModule,
   ],
 

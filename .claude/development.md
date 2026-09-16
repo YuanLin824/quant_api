@@ -36,16 +36,16 @@
 
 `docker-compose.yml` 启动两个容器（`docker compose up -d`）：
 
-| 服务     | 镜像                | 默认端口 |
-| -------- | ------------------- | -------- |
-| postgres | timescaledb-ha:pg18 | 5432     |
-| redis    | redis:8-alpine      | 6379     |
+| 服务     | 镜像               | 默认端口 |
+| -------- | ------------------ | -------- |
+| postgres | postgres:18-alpine | 5432     |
+| redis    | redis:8-alpine     | 6379     |
 
 > 账号初始化脚本位于 `docker-compose/postgres.sh` 与 `docker-compose/redis.sh`。
 
 ## 接口调试
 
-- `REST_CLIENT.http` — VS Code REST Client 可直接执行的接口集合，覆盖健康检查、认证与全部行情接口
+- `REST_CLIENT.http` — VS Code REST Client 可直接执行的接口集合，覆盖健康检查、认证与全部通达信行情接口
 - 该文件可直接复用登录接口返回的 `accessToken`（通过 `{{login.response.body.data.accessToken}}` 变量引用）
 
 ## 文档结构
@@ -55,8 +55,6 @@ API 文档位于项目根目录和 `docs` 目录：
 - `API.md` — API 文档入口，包含基础信息、认证与限流说明、通用响应格式、错误码与数据库错误映射
 - `docs/health.md` — 健康检查接口
 - `docs/auth.md` — 认证接口（注册、登录、刷新、登出、用户信息、修改密码、登出所有设备）
-- `docs/stock-api.md` — Stock API 接口（行情、K线、搜索）
-- `docs/stock-sdk.md` — Stock SDK 接口（行情、基金、批量行情、K线、K线信号、大单、代码列表、搜索，以及标的代码同步与三类资金流采集的定时任务）
 - `docs/tdx.md` — 通达信接口（K线、五档盘口、当日与历史分时、当日与历史分笔成交、证券数量与列表）
 - `docs/config.md` — 系统配置（认证机制、环境变量、开发环境）
 
