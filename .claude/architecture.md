@@ -39,7 +39,8 @@
 
 11. **每日标的代码同步**: `StockSymbolScheduler` 每天 09:00（开盘前）触发（`@Cron` 显式指定 `timeZone: 'Asia/Shanghai'`——容器多为 UTC，不指定会相差 8 小时），把 A股/美股/港股/基金代码同步到 `stock_symbols` 表。
     - **以 `code` 为唯一键的 upsert**：不存在则新增，已存在且 `market` 有变化时更新，无变化则不写入——`skipUpdateIfNoValuesChanged` 让 PostgreSQL 生成 `WHERE ... IS DISTINCT FROM ...`，避免无意义的写放大；不删除退市记录
-    - 用 `ON CONFLICT` 而非「先查后插」：一次往返、无竞态，也避免为数千条代码逐条查询。`code` 已统一为「市场前缀 + 代码」（`sh600000` / `usAAPL` / `hk00700`），因此本身全局唯一
+    - 用 `ON CONFLICT` 而非「先查后插」：一次往返、无竞态，也避免为数千条代码逐条查询。`code` 统一为「市场前缀 + 代码」（`sh600000` / `usAAPL` / `hk00700`）后基本全局唯一，但**并非天然如此**——美股剥掉东财板块前缀（`105`/`106`/`107`）是**有损**的：同一标的可能同时挂在两个板块下（实测 `105.PC` 与 `106.PC` 同为 `PC.OQ`），规范化后撞成同一个 `code`
+    - **写库前必须去重**（`normalize`）：`upsert` 把整批拼成**单条** INSERT，同批内出现重复冲突键会让 PostgreSQL 报 `ON CONFLICT DO UPDATE command cannot affect row a second time`，整批失败并连带中断该市场当次同步。去重保留先出现的一条——被丢弃的是同一标的的重复挂载，不会丢标的；A股/港股/基金经同一逻辑校验无此问题
     - **各市场相互独立**：单个失败只记录并继续，下次任务自然补上
     - **异常自洽**：任务内全量 try/catch，绝不向调度器抛出——全局异常过滤器依赖 HTTP 上下文（`host.switchToHttp()`），捕获 cron 异常会在过滤器内二次报错
 

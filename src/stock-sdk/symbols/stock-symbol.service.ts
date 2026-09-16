@@ -59,12 +59,17 @@ export class StockSymbolService {
     for (const market of SYNC_MARKETS) {
       try {
         const codes = await this.stockSdkService.getCodes(market)
-        // 统一各市场的代码格式（详见 toStoredCode）
-        const stored = codes.map((code) => this.toStoredCode(market, code))
+        // 统一各市场的代码格式并去重（详见 toStoredCode / normalize）
+        const { stored, duplicates } = this.normalize(market, codes)
+        if (duplicates.length > 0) {
+          this.logger.warn(
+            `[${market}] 有 ${duplicates.length} 条代码规范化后与其它条目撞车, 已丢弃: ${duplicates.join(', ')}`
+          )
+        }
         const inserted = await this.upsert(market, stored)
-        results.push({ market, total: stored.length, inserted })
+        results.push({ market, total: codes.length, inserted })
         this.logger.log(
-          `[${market}] 上游 ${stored.length} 条, 新增 ${inserted} 条, 其余已存在(有变化则更新)`
+          `[${market}] 上游 ${codes.length} 条, 去重后 ${stored.length} 条, 新增 ${inserted} 条, 其余已存在(有变化则更新)`
         )
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
@@ -74,6 +79,41 @@ export class StockSymbolService {
     }
 
     return { results, durationMs: Date.now() - startedAt }
+  }
+
+  /**
+   * 规范化代码并去重
+   *
+   * 去重不可省，原因在美股的规范化上：`toStoredCode` 会剥掉东财的板块前缀，
+   * 而同一标的可能同时挂在两个板块下——`105.PC` 与 `106.PC` 实为同一只
+   * （PC.OQ），规范化后撞成同一个 `code`。而 `upsert` 是把整批拼成**单条**
+   * INSERT，同一批内出现重复的冲突键，PostgreSQL 会直接报
+   * `ON CONFLICT DO UPDATE command cannot affect row a second time`，
+   * 整批写入失败并连带中断该市场当次同步。
+   *
+   * 保留先出现的一条：被丢弃的是同一标的的重复挂载，不会丢标的。
+   *
+   * @returns stored 去重后的代码；duplicates 被丢弃的**原始**代码（供日志定位）
+   */
+  private normalize(
+    market: CodesMarket,
+    codes: string[]
+  ): { stored: string[]; duplicates: string[] } {
+    const stored: string[] = []
+    const duplicates: string[] = []
+    const seen = new Set<string>()
+
+    for (const code of codes) {
+      const normalized = this.toStoredCode(market, code)
+      if (seen.has(normalized)) {
+        duplicates.push(code)
+        continue
+      }
+      seen.add(normalized)
+      stored.push(normalized)
+    }
+
+    return { stored, duplicates }
   }
 
   /**
@@ -126,6 +166,9 @@ export class StockSymbolService {
    *
    * 用 ON CONFLICT 而非「先查后插」：一次往返、无竞态，
    * 也避免为数千条代码逐条查询。
+   *
+   * **入参须已去重**（调用方经 `normalize` 保证）：同一条 INSERT 内出现重复的
+   * 冲突键，PG 会报 `cannot affect row a second time` 并让整批失败。
    *
    * 返回值取插入前后的 count 差值，即**新增数**——更新不改变总数，
    * 故无法由此得出更新条数（日志中只报新增与上游总数）。

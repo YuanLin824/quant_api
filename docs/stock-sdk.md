@@ -933,10 +933,10 @@ Authorization: Bearer <access_token>
   "message": "同步完成",
   "data": {
     "results": [
-      { "market": "cn", "total": 5412, "inserted": 3 },
-      { "market": "us", "total": 8231, "inserted": 0 },
-      { "market": "hk", "total": 2614, "inserted": 1 },
-      { "market": "fund", "total": 19820, "inserted": 0 }
+      { "market": "cn", "total": 5563, "inserted": 3 },
+      { "market": "us", "total": 13538, "inserted": 0 },
+      { "market": "hk", "total": 4695, "inserted": 1 },
+      { "market": "fund", "total": 27851, "inserted": 0 }
     ],
     "durationMs": 8420
   }
@@ -947,6 +947,10 @@ Authorization: Bearer <access_token>
 > 不存在则新增；已存在且所属市场有变化时更新，无变化则不写入；不会删除已退市的历史记录。
 >
 > 各市场相互独立——单个市场失败只在该项的 `error` 字段体现，其余市场照常同步。
+>
+> 入库前会对代码做规范化并**去重**：美股剥掉东财板块前缀（`105`/`106`/`107`）是**有损**的，
+> 同一标的可能同时挂在两个板块下（如 `105.PC` 与 `106.PC` 同为 `PC.OQ`），规范化后撞成同一个代码。
+> 因此 `total` 为**上游原始条数**，可能略大于实际入库数（美股约 2 条），重复项会记入 WARN 日志。
 
 **示例**
 
