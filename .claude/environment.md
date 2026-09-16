@@ -42,11 +42,12 @@ API_PREFIX="/api"              # 默认 /api
 JWT_ACCESS_EXPIRES_IN="15m"   # 默认 15 分钟，支持 s/m/h/d 单位
 JWT_REFRESH_EXPIRES_IN="7d"   # 默认 7 天，支持 s/m/h/d 单位
 AUTH_MAX_DEVICES="5"          # 默认 5 个设备
-REDIS_KEY_PREFIX="quant-"     # Redis key 前缀
+REDIS_KEY_PREFIX="quant-"     # Redis key 前缀，默认空字符串（不配置则不加前缀）
 ALLOWED_ORIGINS="https://example.com"  # 生产环境必须配置，否则启动失败；多个用逗号分隔
 TDX_HOST="119.147.212.81"              # 通达信行情服务器 IP，留空则自动测速选最快
 TDX_PORT="7709"                        # 通达信行情服务器端口，默认 7709
 ```
 
-> `PG_URL` / `REDIS_URL` 是应用实际读取的统一连接串，在 `.env.example` 中分别由 `PG_*`、`REDIS_*` 分项拼接生成；
+> `PG_URL` / `REDIS_URL` 是应用实际读取的统一连接串，在 `.env.example` 中分别由 `PG_*`、`REDIS_*` 分项拼接生成
+> （占位符 `${VAR}` 的展开依赖 `ConfigModule.forRoot` 的 `expandVariables: true`）；
 > 这些分项变量仅供 `docker-compose` 使用，应用代码只读取连接串。

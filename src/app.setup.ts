@@ -62,7 +62,7 @@ export function configureApp(app: INestApplication): void {
     maxAge: 86400, // 预检请求缓存 24 小时
   })
 
-  // 全局路由前缀 — 所有接口统一加 /api/dev 或 /api/prod 前缀
+  // 全局路由前缀 — 取自 API_PREFIX 配置（默认 /api）
   app.setGlobalPrefix(globalConfig.apiPrefix)
 
   // 全局校验管道 — 配合 class-validator 自动校验 DTO

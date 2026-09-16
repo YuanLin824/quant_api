@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common'
 import { SkipThrottle, Throttle } from '@nestjs/throttler'
 import type { Request } from 'express'
 import requestIp from 'request-ip'
@@ -30,6 +30,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @HttpCode(200)
   @Throttle({ default: { limit: 10, ttl: 600000 } }) // 每 10 分钟最多 10 次登录
   async login(@Body() dto: LoginDto, @Req() req: Request) {
     const data = await this.authService.login(dto, this.extractDevice(req))
@@ -37,6 +38,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @HttpCode(200)
   @UseGuards(RefreshAuthGuard)
   @Throttle({ default: { limit: 20, ttl: 600000 } }) // 每 10 分钟最多 20 次刷新
   async refresh(@Req() req: AuthenticatedRequest) {
@@ -45,6 +47,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @HttpCode(200)
   @SkipThrottle() // 登出操作不限流
   async logout(@Body() dto: RefreshTokenDto) {
     await this.authService.logout(dto.refreshToken)
@@ -59,6 +62,7 @@ export class AuthController {
   }
 
   @Post('change-password')
+  @HttpCode(200)
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 3600000 } }) // 每小时最多 5 次修改密码
   async changePassword(@Req() req: AuthenticatedRequest, @Body() dto: ChangePasswordDto) {
@@ -67,6 +71,7 @@ export class AuthController {
   }
 
   @Post('logout-all')
+  @HttpCode(200)
   @UseGuards(JwtAuthGuard)
   @SkipThrottle() // 登出操作不限流
   async logoutAll(@Req() req: AuthenticatedRequest) {

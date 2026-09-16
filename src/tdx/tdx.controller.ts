@@ -23,8 +23,8 @@ import { TdxService } from './tdx.service'
  * 分笔成交与证券列表查询。所有接口需要 JWT 认证，不限流
  * （数据为公开行情，且底层连接已串行化请求）。
  *
- * 与 stock-api / stock-sdk 的区别：数据源是通达信行情服务器，
- * 字段口径与单位不同——**价格单位为厘（元 × 1000）**。
+ * 数据源是通达信行情服务器，字段口径与单位与常见 HTTP 行情接口不同
+ * ——**价格单位为厘（元 × 1000）**。
  */
 @Controller('tdx')
 @UseGuards(JwtAuthGuard)

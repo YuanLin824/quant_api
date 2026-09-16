@@ -37,7 +37,7 @@ const DEV_OPTS = {
  *
  * 供 NestFactory.create 使用，替换 NestJS 默认的控制台 Logger。
  * 生产环境按等级分别输出到 info/warn/error 三个文件（均按小时轮转），
- * 开发环境输出到控制台（level: warn）。
+ * 开发环境输出到控制台（level: info）。
  */
 export const WINSTON_LOGGER = WinstonModule.createLogger({
   transports: IS_PROD

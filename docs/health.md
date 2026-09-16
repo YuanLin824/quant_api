@@ -19,7 +19,7 @@ GET /api/health
   "code": 200,
   "message": "服务运行正常",
   "data": {
-    "version": "0.0.1",
+    "version": "1.0.0",
     "uptime": "12345s",
     "timestamp": "2024-01-01T00:00:00.000Z",
     "memory": {

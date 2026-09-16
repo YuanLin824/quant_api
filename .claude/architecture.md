@@ -4,10 +4,11 @@
 
 - **AppModule** (`src/app.module.ts`) — 根模块，全局注册 Redis 服务、异常过滤器、限流守卫、请求日志中间件
 - **AppSetup** (`src/app.setup.ts`) — 应用公共装配（Helmet / CORS / 全局前缀 / 校验管道），由 `main.ts` 与 e2e 测试共用，避免测试环境与线上配置漂移
+- **AppController / AppService** (`src/app.controller.ts` / `src/app.service.ts`) — 健康检查接口，返回服务状态、版本号、运行时长与内存占用
 - **AuthModule** (`src/auth/`) — 认证模块，JWT 双密钥方案（access + refresh token）
-- **StockApiModule** (`src/stock-api/`) — 股票行情模块，基于 `stock-api` 库，`stocks.auto` 在 tencent → sina → eastmoney 间自动兜底
-- **StockSdkModule** (`src/stock-sdk/`) — 股票行情模块，基于 `stock-sdk` 库，提供行情 / K线（含技术指标） / 信号 / 大单 / 代码列表，支持 A 股/港股/美股/基金；另含四个每日定时任务：标的代码同步（`symbols/`）、个股资金流排名（`fund-flows/`）、大盘资金流（`market-flows/`）、板块资金流（`sectors/`）
-- **TdxModule** (`src/tdx/`) — 通达信行情模块，基于 `node-tdx-market`（通达信 TCP 协议），提供 K线 / 五档盘口（批量） / 当日与历史分时 / 当日与历史分笔成交 / 证券数量 / 全量证券列表
+- **TdxModule** (`src/tdx/`) — 唯一的行情模块，基于 `node-tdx-market`（通达信 TCP 协议），提供 K线 / 五档盘口（批量） / 当日与历史分时 / 当日与历史分笔成交 / 证券数量 / 全量证券列表
+- **Common** (`src/common/`) — 跨模块共享件：`BaseEntity` 实体基类、全局异常过滤器、请求日志中间件、校验装饰器
+- **Config** (`src/config/`) — 配置集中管理：`ENV_KEYS` 常量、`registerAs` 命名空间配置、Winston 日志器
 - **PostgresModule** (`src/database/postgres.module.ts`) — TypeORM 数据源配置
 - **RedisModule** (`src/database/redis.module.ts`) — ioredis 连接管理
 
@@ -27,48 +28,17 @@
 
 5. **实体基类**: 所有业务实体继承 `BaseEntity` (`src/common/base.entity.ts`)，获得 UUID 主键、状态字段、创建/更新时间、软删除支持。
 
-6. **K线接口合并**: `GET /stock-sdk/kline/:market/:code` 单入口按参数分派 —— 分钟周期（`1/5/15/30/60`）优先走分钟K线接口，其次是带 `indicators` 的指标K线，否则走历史K线。分钟周期下 `indicators` 不再生效。
+6. **行情接口不限流**: TdxController 整体 `@SkipThrottle()`，仅在 `auth` 模块按接口配置限流。理由是行情数据为公开信息，且底层连接已串行化请求。
 
-7. **分钟K线交易日自动定位**: `period=1` 且未指定日期范围时，依据 `sdk.calendar.marketStatus()` 判断当前所处交易时段：盘前/休市回退到前一交易日，交易中/午休/盘后取当天。避免盘前或非交易日请求到空数据。
+7. **异常统一收口**: 全局 `AllExceptionsFilter` 将 HttpException、TypeORM `QueryFailedError`（按 PostgreSQL 错误码映射）及未知异常统一为 `{ code, message, data }`，并记录含客户端 IP 的结构化日志。
+   - **失败时 `data` 恒为 `null`**：具体原因一律由 `message` 承载，不再把 Nest 的原始响应对象塞进 `data`（那会让 `{ message, error, statusCode }` 与顶层字段重复）
+   - **校验错误并入 `message`**：ValidationPipe 抛出的 `BadRequestException`，其 `exception.message` 只有固定的 `Bad Request Exception`，故优先取 `getResponse().message` 数组并以 `; ` 连接，保证调用方能定位到具体参数
 
-8. **行情接口不限流**: StockApi / StockSdk 控制器整体 `@SkipThrottle()`，仅在 `auth` 模块按接口配置限流。理由是行情数据为公开信息，且上游 SDK 自带请求频率控制与数据源兜底。
-
-9. **异常统一收口**: 全局 `AllExceptionsFilter` 将 HttpException、TypeORM `QueryFailedError`（按 PostgreSQL 错误码映射）及未知异常统一为 `{ code, data, message }`，并记录含客户端 IP 的结构化日志。
-
-10. **信号默认回溯窗口**: `GET /stock-sdk/kline/:market/:code/signals` 未传 `startDate` 时按 `period` 套用默认窗口（日线 1 月 / 周线 6 月 / 月线 36 月），避免默认扫描全历史。基准时间取 `endDate`（若提供）或当前时间，保证窗口不会落在查询区间之外。
-
-11. **每日标的代码同步**: `StockSymbolScheduler` 每天 09:00（开盘前）触发（`@Cron` 显式指定 `timeZone: 'Asia/Shanghai'`——容器多为 UTC，不指定会相差 8 小时），把 A股/美股/港股/基金代码同步到 `stock_symbols` 表。
-    - **以 `code` 为唯一键的 upsert**：不存在则新增，已存在且 `market` 有变化时更新，无变化则不写入——`skipUpdateIfNoValuesChanged` 让 PostgreSQL 生成 `WHERE ... IS DISTINCT FROM ...`，避免无意义的写放大；不删除退市记录
-    - 用 `ON CONFLICT` 而非「先查后插」：一次往返、无竞态，也避免为数千条代码逐条查询。`code` 统一为「市场前缀 + 代码」（`sh600000` / `usAAPL` / `hk00700`）后基本全局唯一，但**并非天然如此**——美股剥掉东财板块前缀（`105`/`106`/`107`）是**有损**的：同一标的可能同时挂在两个板块下（实测 `105.PC` 与 `106.PC` 同为 `PC.OQ`），规范化后撞成同一个 `code`
-    - **写库前必须去重**（`normalize`）：`upsert` 把整批拼成**单条** INSERT，同批内出现重复冲突键会让 PostgreSQL 报 `ON CONFLICT DO UPDATE command cannot affect row a second time`，整批失败并连带中断该市场当次同步。去重保留先出现的一条——被丢弃的是同一标的的重复挂载，不会丢标的；A股/港股/基金经同一逻辑校验无此问题
-    - **各市场相互独立**：单个失败只记录并继续，下次任务自然补上
-    - **异常自洽**：任务内全量 try/catch，绝不向调度器抛出——全局异常过滤器依赖 HTTP 上下文（`host.switchToHttp()`），捕获 cron 异常会在过滤器内二次报错
-
-12. **每日板块资金流采集**: `SectorFlowScheduler` 每天 17:00（时区同上，A 股收盘后）通过 `fundFlow.sectorRank` 采集板块资金流排名，写入 `sector_fund_flows`，保留最近一个月。
-    - **数据归属日**：下午 5 点当天已收盘、数据完整，故交易日归属当天；非交易日（周末/节假日）归属之前最近的交易日
-    - **唯一键含板块类型与排名周期** `(trade_date, sector_type, indicator, code)`：同一交易日可按行业/概念/地域与不同周期分别采集，互不覆盖
-    - **空数据保护**：上游返回空数组时跳过落库，避免把已有记录清成空
-    - 落库为覆盖式（先删同批再写），保留原始净额与净占比字段，便于事后回溯
-
-13. **每日个股资金流排名采集**: `StockFundFlowScheduler` 每天 16:00（时区同上，A 股收盘后）通过 `fundFlow.rank` 采集全市场个股资金流排名，写入 `stock_fund_flows`，保留最近一个月。
-    - **落库用分批 insert**（每批 1000 条）而非逐条 save：单日数据为全市场数千条，逐条 save 会生成数千次 SQL
-    - **查询强制分页**（默认 50 条/页，上限 200）：整批返回会造成数百 KB 的响应体，与板块接口（约 86 条，可整批返回）的处理方式不同
-    - 表内保留各单类（超大/大/中/小）的净额与净占比，便于分析资金结构
-    - 数据归属日、覆盖式落库、空数据保护与清理策略同板块任务
-
-14. **每日大盘资金流采集**: `MarketFundFlowScheduler` 每天 16:30（时区同上，A 股收盘后）通过 `fundFlow.market` 采集沪深大盘资金流，写入 `market_fund_flows`，保留最近一个月。
-    - 上游返回的是**按日历史序列**（每条自带 `date`），故日期取自数据本身，无需按运行时推导——与其它三个任务不同
-    - **只写入保留期内的数据**：更早的写入后也会被清理，没必要先写一遍
-    - **增量插入**（`ON CONFLICT DO NOTHING`）而非覆盖式重写：已收盘交易日的历史值不会变动，每天实际新增 1 条
-    - 唯一键只有 `trade_date`——大盘是沪深两市合计口径，每个交易日仅一条记录
-
-> 四个定时任务的时间：标的代码 09:00（开盘前）、个股资金流 16:00、大盘资金流 16:30、板块资金流 17:00——均在开盘前或 A 股收盘后，互不重叠。
-
-15. **通达信行情模块**: `TdxModule` (`src/tdx/`) 基于 `node-tdx-market`（通达信 TCP 协议）提供 8 个查询接口。
-    - **长连接管理**：与服务端维持一条 TCP 长连接（区别于其它模块的 HTTP 库）。启动时主动建连但**不阻塞应用启动**——行情服务不可达只记 warn；请求前检查连接状态（懒连接兜底），断线重连由库的 `autoReconnect` 负责；模块销毁时断开
-    - **价格单位为厘（元 × 1000）**：上游解析结果**原样透传**，不在网关层做字段级换算——价格字段散布在 K线、盘口、分时、分笔、证券列表等各类响应中，逐个转换容易遗漏，改由文档显著说明
-    - **连接不可用时返回 503**（而非 500）：区分「依赖服务不可用」与「服务内部错误」
-    - **不使用库的 `KlineCategory`**：它是 `declare const enum`，与 tsconfig 的 `isolatedModules: true` 冲突（值位置不可用），改用 `tdx.constants.ts` 的数值映射表，对调用方暴露 `1m`/`day`/`week` 等语义化取值
+8. **通达信行情模块**: `TdxModule` (`src/tdx/`) 基于 `node-tdx-market`（通达信 TCP 协议）提供 8 个查询接口。
+   - **长连接管理**：与服务端维持一条 TCP 长连接（区别于常见的 HTTP 行情接口）。启动时主动建连但**不阻塞应用启动**——行情服务不可达只记 warn；请求前检查连接状态（懒连接兜底），断线重连由库的 `autoReconnect` 负责；模块销毁时断开
+   - **价格单位为厘（元 × 1000）**：上游解析结果**原样透传**，不在网关层做字段级换算——价格字段散布在 K线、盘口、分时、分笔、证券列表等各类响应中，逐个转换容易遗漏，改由文档显著说明
+   - **连接不可用时返回 503**（而非 500）：区分「依赖服务不可用」与「服务内部错误」
+   - **不使用库的 `KlineCategory`**：它是 `declare const enum`，与 tsconfig 的 `isolatedModules: true` 冲突（值位置不可用），改用 `tdx.constants.ts` 的数值映射表，对调用方暴露 `1m`/`day`/`week` 等语义化取值
 
 ## 日志
 

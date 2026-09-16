@@ -4,8 +4,8 @@ import { IsArray, IsNotEmpty, IsString } from 'class-validator'
 /**
  * 非空字符串数组校验
  *
- * 收口「数组 + 元素为字符串 + 元素非空」三件套——股票/基金代码数组等多处重复。
- * label 用于拼装错误消息，保持各接口原有的中文文案。
+ * 收口「数组 + 元素为字符串 + 元素非空」三件套。
+ * label 用于拼装错误消息，保持各接口中文文案一致。
  */
 export function IsCodeArray(label: string) {
   return applyDecorators(

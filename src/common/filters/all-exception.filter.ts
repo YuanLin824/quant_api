@@ -47,7 +47,8 @@ const DB_ERROR_MAP: Record<string, { status: number; message: string }> = {
  * 3. 其他未知异常 — 兜底返回 500
  *
  * 所有异常均记录结构化日志（含客户端 IP、路径、方法、堆栈），
- * 响应格式统一为 { code, data, message }
+ * 响应格式统一为 { code, data, message }，失败时 data 恒为 null
+ * （具体错误信息一律由 message 承载，不再嵌套进 data）
  */
 @Catch()
 export class AllExceptionsFilter<T> implements ExceptionFilter {
@@ -67,7 +68,7 @@ export class AllExceptionsFilter<T> implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       status = exception.getStatus()
-      message = exception.message
+      message = this.extractMessage(exception)
     }
 
     // 将 Postgres 错误码翻译为可读的中文消息
@@ -93,13 +94,27 @@ export class AllExceptionsFilter<T> implements ExceptionFilter {
       timestamp: new Date().toISOString(),
     })
 
-    let responseData: Record<string, unknown> = {}
-    if (exception instanceof HttpException) {
-      const exceptionResponse = exception.getResponse()
-      if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        responseData = exceptionResponse as Record<string, unknown>
+    httpAdapter.reply(res, { code: status, data: null, message }, status)
+  }
+
+  /**
+   * 提取异常消息
+   *
+   * ValidationPipe 抛出的 BadRequestException，其 response 形如
+   * `{ message: ['字段错误1', ...], error, statusCode }`，而 `exception.message`
+   * 只有固定的 `Bad Request Exception`。此处优先取 response.message 中的具体
+   * 校验错误并拼接，保证调用方能定位到具体参数问题。
+   */
+  private extractMessage(exception: HttpException): string {
+    const response = exception.getResponse()
+
+    if (typeof response === 'object' && response !== null) {
+      const message = (response as { message?: unknown }).message
+      if (Array.isArray(message) && message.length > 0) {
+        return message.join('; ')
       }
     }
-    httpAdapter.reply(res, { code: status, data: responseData, message: message }, status)
+
+    return exception.message
   }
 }

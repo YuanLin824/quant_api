@@ -8,7 +8,7 @@ export class AppService {
       code: 200,
       message: '服务运行正常',
       data: {
-        version: '0.0.1', // 应用版本号（与 package.json 同步）
+        version: '1.0.0', // 应用版本号（与 package.json 同步）
         uptime: `${Math.floor(process.uptime())}s`, // 进程已运行时长（秒）
         timestamp: new Date().toISOString(), // 当前 UTC 时间戳
         memory: {

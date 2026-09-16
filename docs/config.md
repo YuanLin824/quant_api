@@ -24,7 +24,7 @@
 ### 安全特性
 
 1. **密码加密**: 使用 bcrypt 算法加密存储（12 轮）
-2. **登录失败限制**: 连续 5 次密码错误后，账号将被锁定 15 分钟（返回 `403`）
+2. **登录失败限制**: 连续 5 次密码错误后账号被锁定（返回 `403`），窗口自**首次失败**起算 15 分钟
 3. **防时序攻击**: 密码比对使用恒定时间算法，用户不存在时执行等价比对
 4. **防用户名枚举**: 用户不存在与密码错误返回相同消息
 5. **请求限流**: 按接口差异化配置，详见下表
@@ -42,7 +42,7 @@
 | `POST /auth/change-password` | 每小时最多 5 次      |
 | `POST /auth/logout`          | 不限流               |
 | `POST /auth/logout-all`      | 不限流               |
-| Stock API / Stock SDK / TDX  | 不限流               |
+| TDX                          | 不限流               |
 
 > 触发限流返回 `429`；账号锁定返回 `403`，两者含义不同。
 
@@ -131,13 +131,13 @@ curl -X POST http://localhost:3001/api/auth/login \
 curl http://localhost:3001/api/auth/profile \
   -H "Authorization: Bearer <access_token>"
 
-# 获取股票行情
-curl -X POST http://localhost:3001/api/stock-sdk/quotes/cn \
+# 获取股票 K 线（价格单位为厘，元 = 厘 / 1000）
+curl "http://localhost:3001/api/tdx/kline/600519?period=day&count=10" \
+  -H "Authorization: Bearer <access_token>"
+
+# 批量获取五档盘口
+curl -X POST "http://localhost:3001/api/tdx/quotes" \
   -H "Authorization: Bearer <access_token>" \
   -H "Content-Type: application/json" \
   -d '{"codes": ["600519"]}'
-
-# 搜索股票
-curl http://localhost:3001/api/stock-sdk/search?keyword=茅台 \
-  -H "Authorization: Bearer <access_token>"
 ```

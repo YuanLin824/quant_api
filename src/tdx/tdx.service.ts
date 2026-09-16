@@ -14,8 +14,8 @@ import { KLINE_CATEGORY_MAP, type KlinePeriodKey } from './tdx.constants'
 /**
  * 通达信行情服务
  *
- * 封装 `node-tdx-market`（通达信 TCP 协议客户端）。与项目中其它行情模块不同，
- * 这里维护的是一条**长连接**，因此需要处理连接生命周期：
+ * 封装 `node-tdx-market`（通达信 TCP 协议客户端）。维护的是一条**长连接**，
+ * 因此需要处理连接生命周期：
  * - 启动时主动建连，但**不阻塞应用启动**——服务不可达时只记 warn，首次请求会重试
  * - 请求前检查连接状态（懒连接），断线由库的 autoReconnect 负责
  * - 模块销毁时断开，避免进程退出时挂起

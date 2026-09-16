@@ -5,12 +5,10 @@
 ## 目录
 
 - [基础信息](#基础信息)
+- [系统配置](./docs/config.md)
 - [健康检查](./docs/health.md)
 - [认证接口](./docs/auth.md)
-- [Stock API 接口](./docs/stock-api.md)
-- [Stock SDK 接口](./docs/stock-sdk.md)
 - [通达信（TDX）接口](./docs/tdx.md)
-- [系统配置](./docs/config.md)
 
 ## 基础信息
 
@@ -21,25 +19,23 @@
 
 ## 认证与限流
 
-| 接口分组   | 路径前缀         | 认证要求                                   | 限流              |
-| ---------- | ---------------- | ------------------------------------------ | ----------------- |
-| 健康检查   | `/api/health`    | 否                                         | 全局 60 秒 100 次 |
-| 认证接口   | `/api/auth`      | 各接口不同，详见[认证接口](./docs/auth.md) | 各接口独立配置    |
-| Stock API  | `/api/stock-api` | 是（access token）                         | 不限流            |
-| Stock SDK  | `/api/stock-sdk` | 是（access token）                         | 不限流            |
-| 通达信 TDX | `/api/tdx`       | 是（access token）                         | 不限流            |
+| 接口分组   | 路径前缀      | 认证要求                                   | 限流                 |
+| ---------- | ------------- | ------------------------------------------ | -------------------- |
+| 健康检查   | `/api/health` | 否                                         | 全局 60 秒 100 次    |
+| 认证接口   | `/api/auth`   | 各接口不同，详见[认证接口](./docs/auth.md) | 各接口不同，见该文档 |
+| 通达信 TDX | `/api/tdx`    | 是（access token）                         | 不限流               |
 
-受保护接口统一通过请求头携带令牌：
+受保护接口统一通过请求头携带令牌（唯一例外是 `POST /api/auth/refresh`，它携带的是 refresh token）：
 
 ```
 Authorization: Bearer <access_token>
 ```
 
-> 行情类接口因数据为公开信息且上游已有兜底机制，已显式豁免限流。
+> 行情类接口因数据为公开信息，已显式豁免限流。
 
 ## 通用响应格式
 
-所有接口返回统一的响应格式：
+所有接口返回统一的响应格式：成功时 `data` 为业务数据，**失败时 `data` 恒为 `null`**：
 
 ```json
 {
@@ -51,34 +47,25 @@ Authorization: Bearer <access_token>
 
 ### 错误响应
 
-`code` 与 HTTP 状态码保持一致，`data` 携带 `HttpException.getResponse()` 的原始内容
-（非 `HttpException` 的未知异常才为空对象 `{}`）：
+`code` 与 HTTP 状态码保持一致，`message` 为具体的错误原因：
 
 ```json
 {
   "code": 401,
   "message": "访问令牌无效或已过期",
-  "data": {
-    "statusCode": 401,
-    "message": "访问令牌无效或已过期",
-    "error": "Unauthorized"
-  }
+  "data": null
 }
 ```
 
 ### 参数校验失败
 
-DTO 校验失败时，`message` 为 NESTJS 默认文案，具体原因位于 `data.message` 数组中：
+DTO 校验失败时，`message` 直接给出具体的校验错误；多条错误以 `; ` 连接：
 
 ```json
 {
   "code": 400,
-  "message": "Bad Request Exception",
-  "data": {
-    "message": ["市场类型必须是 cn/hk/us/fund"],
-    "error": "Bad Request",
-    "statusCode": 400
-  }
+  "message": "股票代码必须是数组",
+  "data": null
 }
 ```
 
