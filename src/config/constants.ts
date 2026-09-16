@@ -40,6 +40,4 @@ export const ENV_KEYS = {
   // 通达信行情（TDX）
   TDX_HOST: 'TDX_HOST',
   TDX_PORT: 'TDX_PORT',
-
-  CRYPTO_PROXY: 'CRYPTO_PROXY',
 } as const

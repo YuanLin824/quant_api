@@ -46,7 +46,6 @@ REDIS_KEY_PREFIX="quant-"     # Redis key 前缀
 ALLOWED_ORIGINS="https://example.com"  # 生产环境必须配置，否则启动失败；多个用逗号分隔
 TDX_HOST="119.147.212.81"              # 通达信行情服务器 IP，留空则自动测速选最快
 TDX_PORT="7709"                        # 通达信行情服务器端口，默认 7709
-CRYPTO_PROXY="http://127.0.0.1:7890"   # 预留：加密数据采集代理，当前代码未使用
 ```
 
 > `PG_URL` / `REDIS_URL` 是应用实际读取的统一连接串，在 `.env.example` 中分别由 `PG_*`、`REDIS_*` 分项拼接生成；
