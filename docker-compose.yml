@@ -5,9 +5,9 @@ name: quant
 
 services:
   postgres:
-    # image: timescaledb-ha:pg18
-    # 下载失败时,可使用该镜像源
-    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/timescale/timescaledb-ha:pg18
+    # 需要 postgres 的 timescale 扩展时, 使用该镜像
+    # image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/timescale/timescaledb-ha:pg18
+    image: postgres:18-alpine
     container_name: quant_postgres
     ports:
       - "${PG_PORT:-5432}:5432"
@@ -27,8 +27,6 @@ services:
 
   redis:
     image: redis:8-alpine
-    # 下载失败时,可使用该镜像源
-    # image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/redis:8-alpine
     container_name: quant_redis
     ports:
       - "${REDIS_PORT:-6379}:6379"

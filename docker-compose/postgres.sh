@@ -13,14 +13,14 @@ CREATE DATABASE ${PG_DB} OWNER ${PG_USER};
 GRANT ALL PRIVILEGES ON DATABASE ${PG_DB} TO ${PG_USER};
 EOSQL
 
-echo "========== 创建 TimescaleDB 扩展 =========="
-# 必须以超级用户身份在 quant_db 上执行(quant 非超级用户无法建扩展)
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$PG_DB" <<-EOSQL
-CREATE EXTENSION IF NOT EXISTS timescaledb;
-GRANT USAGE ON SCHEMA public TO ${PG_USER};
-GRANT CREATE ON SCHEMA public TO ${PG_USER};
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO ${PG_USER};
-EOSQL
+# echo "========== 创建 TimescaleDB 扩展 =========="
+# # 必须以超级用户身份在 quant_db 上执行(quant 非超级用户无法建扩展)
+# psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$PG_DB" <<-EOSQL
+# CREATE EXTENSION IF NOT EXISTS timescaledb;
+# GRANT USAGE ON SCHEMA public TO ${PG_USER};
+# GRANT CREATE ON SCHEMA public TO ${PG_USER};
+# GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO ${PG_USER};
+# EOSQL
 
 # echo "========== 创建表结构 =========="
 # psql -v ON_ERROR_STOP=1 --username "$PG_USER" --dbname "$PG_DB" <<-EOSQL
