@@ -35,12 +35,16 @@ import { TdxModule } from './tdx/tdx.module'
       load: [GLOBAL_CONFIG],
     }),
     // 全局限流：每个 IP 在 60 秒内最多 100 次请求
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // 60 秒
-        limit: 100, // 最多 100 次请求
-      },
-    ]),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60000, // 60 秒
+          limit: 100, // 最多 100 次请求
+        },
+      ],
+      // 库的默认文案 "ThrottlerException: Too Many Requests" 会把框架内部类名下发给调用方
+      errorMessage: '请求过于频繁，请稍后重试',
+    }),
     PostgresModule,
     RedisModule,
     AuthModule,
