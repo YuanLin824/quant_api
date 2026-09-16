@@ -1,6 +1,6 @@
 # 认证接口
 
-[← 返回目录](../API.md)
+[← 返回目录](../../API.md)
 
 > 认证要求因接口而异：注册、登录、登出无需令牌；刷新令牌使用 `Bearer <refresh_token>`；
 > 其余接口使用 `Bearer <access_token>`。

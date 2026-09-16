@@ -1,11 +1,9 @@
-# WeStock Data - 常见分析场景详解
+# 分析场景详解
 
-> **定位**：本文档是 SKILL.md 的 **L3 层补充材料**，提供完整的分析场景示例和详细操作步骤。
->
-> **使用方式**：AI 在遇到不确定的分析场景时按需加载本文档。命令列表和基本用法请参见
-> [SKILL.md](../SKILL.md)。
->
-> **场景总数**：共 67 个场景，按 16 个功能分组组织。
+[← 返回目录](../../WESTOCK.md)
+
+> 本文档提供完整的分析场景示例和详细操作步骤，共 67 个场景，按 16 个功能分组组织。
+> 命令列表和基本用法请参见 [WESTOCK.md](../../WESTOCK.md)。
 
 ---
 
@@ -56,7 +54,7 @@
 ```
 用户："分析一下茅台的筹码分布情况"
 
-AI 步骤：
+操作步骤：
 1. 搜索股票：westock search 贵州茅台 → sh600519
 2. 查询筹码数据：westock chip sh600519
 3. 解析筹码盈利率（chipProfitRate）→ 判断获利盘/套牢盘比例
@@ -70,7 +68,7 @@ AI 步骤：
 ```
 用户："看看招商银行近一个月的筹码变化趋势"
 
-AI 步骤：
+操作步骤：
 1. 搜索股票：westock search 招商银行 → sh600036
 2. 查询历史筹码：westock chip sh600036 --start 2026-02-10 --end 2026-03-10
 3. 解析 items[] 中每日的筹码数据
@@ -83,7 +81,7 @@ AI 步骤：
 
 ### 2.3 技术指标多周期分析
 
-`westock technical` 支持**日K/周K/月K/季K/年K/分钟K**等周期技术指标；AI 做趋势分析时可同时拉多周期对比（美股指数仅支持日K，非日周期返回 `TECHNICAL_002`）：
+`westock technical` 支持**日K/周K/月K/季K/年K/分钟K**等周期技术指标；做趋势分析时可同时拉多周期对比（美股指数仅支持日K，非日周期返回 `TECHNICAL_002`）：
 
 ```
 用户："分析茅台的中长期技术面"
@@ -114,7 +112,7 @@ AI 步骤：
 ```
 用户："最近有什么新股可以申购？"
 
-AI 步骤：
+操作步骤：
 1. 查询沪深新股：westock ipo --market hs
    → 格式化输出按状态分类（即将发行/今日可申购/即将上市/中签号公布/已上市），含发行价、市盈率、申购代码、上市日、可比公司、风险提示等
 2. 可选：查询港股新股：westock ipo --market hk
@@ -129,7 +127,7 @@ AI 步骤：
 ```
 用户："今天 A 股市场怎么样？"
 
-AI 步骤：
+操作步骤：
 1. 一键拉取大盘画像：westock market-overview （默认 type=summary）
 2. 解析 14 维度得分（估值/情绪/技术/趋势/风格轮动 等）+ 状态文案
 3. 综合给出今日市场点评，标注偏强/偏弱维度
@@ -141,7 +139,7 @@ AI 步骤：
 ```
 用户："沪股通有哪些标的"
 
-AI 步骤：
+操作步骤：
 1. 拉沪股通成份股：westock connect --exchange sh
 2. 分页拉全量：westock connect --exchange sh --limit 100 --offset 0
 3. 拉深股通：westock connect --exchange sz
@@ -180,7 +178,7 @@ AI 步骤：
 ```
 用户："对比恒生指数和纳斯达克最近的表现"
 
-AI 步骤：
+操作步骤：
 1. 批量查日 K：westock kline hkHSI,us.IXIC --period day --limit 5
 2. 分别解析各指数近期涨跌幅
 3. 对比涨跌幅（标注数据日期，勿称实时）
@@ -192,7 +190,7 @@ AI 步骤：
 ```
 用户："沪深300有哪些成份股？"
 
-AI 步骤：
+操作步骤：
 1. 查询沪深300成份股：westock index constituent sh000300
 2. 解析返回的成份股列表
 3. 输出成份股列表
@@ -221,7 +219,7 @@ AI 步骤：
 ⚠️ 错误做法：默认 `westock search 华为` 只搜股票，搜不到板块；或用外部搜索工具
 ✅ 正确做法：用 `westock search <关键词> --type sector` 两步查询
 
-AI 步骤：
+操作步骤：
 1. 搜索概念板块代码：westock search 华为 --type sector
    → 返回匹配的板块列表（如 style_pt01801517 华为概念）
 2. 用板块代码查成份股：westock sector constituent style_pt01801517
@@ -239,7 +237,7 @@ AI 步骤：
 ```
 用户："电子行业有哪些成份股？"
 
-AI 步骤：
+操作步骤：
 1. 查询申万一级电子行业成份股：westock sector constituent pt01801080
 2. 解析返回的成份股列表
 3. 输出成份股列表（代码、名称）
@@ -251,7 +249,7 @@ AI 步骤：
 ```
 用户："帮我看看半导体板块的成份股，并查看涨幅前5的行情"
 
-AI 步骤：
+操作步骤：
 1. 查询申万二级半导体成份股：westock sector constituent pt01801081
 2. 取返回的成份股代码列表
 4. 按涨跌幅排序取前5
@@ -263,7 +261,7 @@ AI 步骤：
 ```
 用户："半导体板块有哪些成份股"
 
-AI 步骤：
+操作步骤：
 1. 搜索板块代码 → pt01801081
 2. 拉取成份股：westock sector constituent pt01801081
 3. 输出成份股清单（含代码/名称/涨跌/成交额等）
@@ -286,7 +284,7 @@ AI 步骤：
 
 ✅ 正确做法：finance（已披露）→ valuation（贵不贵）→ forecast（未来预期）
 
-AI 步骤：
+操作步骤：
 1. 若用户未给代码：westock search 银行 --type sector
    → 取申万行业 pt 代码（如 pt01801780 银行一级）
 2. 同一轮并行查询三条（深研单行业）：
@@ -313,7 +311,7 @@ AI 步骤：
 ```
 用户："最近哪些行业板块涨得好？资金在流向哪里？"
 
-AI 步骤：
+操作步骤：
 1. 查询板块行情榜：westock sector ranking
 2. 直接基于格式化输出，输出行业板块资金面和涨幅分析
 ```
@@ -329,7 +327,7 @@ AI 步骤：
 ```
 用户："看看茅台的机构评级和一致预期"
 
-AI 步骤：
+操作步骤：
 1. 搜索股票：westock search 贵州茅台 → sh600519
 2. 查询评级数据：westock rating sh600519
    → 解析机构评级分布（买入/增持/中性/减持/卖出）
@@ -345,7 +343,7 @@ AI 步骤：
 ```
 用户："看看最近有哪些关于茅台的研报"
 
-AI 步骤：
+操作步骤：
 1. 搜索股票：westock search 贵州茅台 → sh600519
 2. 查询研报列表：westock report list sh600519 --limit 10
    → 解析研报标题、机构、分析师、评级、发布时间
@@ -364,7 +362,7 @@ AI 步骤：
 ```
 用户："本周有哪些个股事件？" / "今天有哪些股票分红/发财报？"
 
-AI 步骤：
+操作步骤：
 1. 查询指定日期的个股事件：westock calendar --date 2026-03-10
    → 按事件类型分组输出（财报发布/分红派息/新股发行/停复牌/会议/限售解禁/增发）
 2. 默认查当天，可按 --date 指定日期，--market 指定市场（hs/hk/us）
@@ -382,7 +380,7 @@ AI 步骤：
 ```
 用户："看看 sh600519 有没有质押风险"
 
-AI 步骤：
+操作步骤：
 1. 查询风险明细：westock risk sh600519 --types pledge,unlock
 2. 解析质押率 / 解禁规模 / 解禁日期
 3. 输出风险细节
@@ -393,7 +391,7 @@ AI 步骤：
 ```
 用户："最近哪些高管在减持茅台"
 
-AI 步骤：
+操作步骤：
 1. 拉取高管增减持明细：westock risk sh600519 --types executivetransfer
    （别名 executive 也可：--types executive）
 2. 解析每条增减持记录：高管姓名、变动数量、变动方向、变动后持股
@@ -417,7 +415,7 @@ AI 步骤：
 ```
 用户："查看贵州茅台最近的财务公告内容"
 
-AI 步骤：
+操作步骤：
 1. 搜索股票：westock search 贵州茅台 → sh600519
 2. 查询公告列表：westock notice list sh600519 --type 1
 3. 从列表中获取公告ID（如 nos1224809143）
@@ -476,7 +474,7 @@ AI 步骤：
 → 注意：仅支持申万行业，概念/地域板块不支持
 
 用户："今天北向成交最活跃的股票有哪些？"
-→ 不在本 Skill：改用 westock screen ranking --type north_active_d（固定 Top20 日榜）
+→ 不在 westock 范围：改用 westock screen ranking --type north_active_d（固定 Top20 日榜）
 ```
 
 ---
@@ -509,7 +507,7 @@ AI 步骤：
 ```
 用户："查看贵州茅台近5年的分红记录"
 
-AI 步骤：
+操作步骤：
 1. 搜索股票：westock search 贵州茅台 → sh600519
 2. 查询分红历史：westock dividend sh600519 --years 5
 3. 解析 plans[] 中的分红方案（reportEndDate, cashDiviRMB, dividendPlan）
@@ -523,7 +521,7 @@ AI 步骤：
 ```
 用户："查看腾讯近几年的分红记录"
 
-AI 步骤：
+操作步骤：
 1. 查询分红历史：westock dividend hk00700 --years 5
 2. 解析 plans[] 中的分红方案
 3. 分析每年分红趋势（每股派息、合计派现、分红频次）
@@ -535,7 +533,7 @@ AI 步骤：
 ```
 用户："查看苹果近10年的分红记录"
 
-AI 步骤：
+操作步骤：
 1. 查询分红历史：westock dividend usAAPL --years 10
 2. 解析 plans[] 中的分红方案
 3. 分析美股季度分红特征（每季度分红金额、年度累计）
@@ -548,7 +546,7 @@ AI 步骤：
 ```
 用户："对比贵州茅台、腾讯和苹果近3年的分红情况"
 
-AI 步骤：
+操作步骤：
 1. 批量查询分红历史：westock dividend sh600519,hk00700,usAAPL --years 3
 2. 解析批量查询结果 中各股票的 plans[]
 3. 注意各市场数据格式差异：
@@ -564,7 +562,7 @@ AI 步骤：
 ```
 用户："苹果什么时候除权派息？"
 
-AI 步骤：
+操作步骤：
 1. 搜索股票：westock search 苹果 → usAAPL
 2. 查询分红历史：westock dividend usAAPL --years 5
 3. 解析 plans[] 中的除权日列表
@@ -577,7 +575,7 @@ AI 步骤：
 ```
 用户："查一下茅台的十大股东"
 
-AI 步骤：
+操作步骤：
 1. 搜索股票：westock search 贵州茅台 → sh600519
 2. 查询股东数据：westock shareholder sh600519
 3. 解析 top10Shareholders（十大股东）和 top10FloatShareholders（十大流通股东）
@@ -591,7 +589,7 @@ AI 步骤：
 ```
 用户："腾讯的机构持仓情况怎么样？"
 
-AI 步骤：
+操作步骤：
 1. 查询股东数据：westock shareholder hk00700
 2. 解析 shareholderInfo（持股股东）→ 主要股东持股比例
 3. 解析 shareholderDist（股东分布）→ 各类机构持股情况
@@ -604,7 +602,7 @@ AI 步骤：
 ```
 用户："查看小米最近的回购情况"
 
-AI 步骤：
+操作步骤：
 1. 搜索股票：westock search 小米集团 → hk01810
 2. 查询回购数据：westock buyback hk01810
 3. 解析回购明细：日期、回购股份、回购金额、回购均价
@@ -655,7 +653,7 @@ AI 步骤：
 ```
 用户："茅台什么时候发财报？"
 
-AI 步骤：
+操作步骤：
 1. 搜索股票：westock search 贵州茅台 → sh600519
 2. 查询财报披露日历：westock disclosure sh600519
 3. 解析 items[] 中的披露日列表
@@ -674,7 +672,7 @@ AI 步骤：
 ```
 用户："分析一下沪深300ETF的基本情况"
 
-AI 步骤：
+操作步骤：
 1. 搜索 ETF：westock search 沪深300ETF --type etf → sh510300
 2. 查询基金档案：westock etf profile sh510300
 3. 查询运作概览：westock etf overview sh510300
@@ -693,7 +691,7 @@ AI 步骤：
 ```
 用户："沪深300ETF的重仓股有哪些？"
 
-AI 步骤：
+操作步骤：
 1. 搜索 ETF：westock search 沪深300ETF --type etf → sh510300（确认 etfDetail=支持）
 2. 查询成分股：westock etf holdings sh510300
 3. 解析 topStockChanges 与 holdings（申赎清单全量成分）
@@ -705,7 +703,7 @@ AI 步骤：
 ```
 用户："沪深300ETF近一个月净值走势如何？"
 
-AI 步骤：
+操作步骤：
 1. 搜索 ETF：westock search 沪深300ETF --type etf → sh510300
 2. 查询净值历史：westock etf nav sh510300 --start 2026-02-10 --end 2026-03-10
 3. 解析每日净值、净值涨跌（`navChange`/`navChangePct` 由相邻日 `EtfNav` 差分；区间内首日无前值）
@@ -718,7 +716,7 @@ AI 步骤：
 ```
 用户："对比沪深300ETF和创业板ETF的费用"
 
-AI 步骤：
+操作步骤：
 1. 搜索 ETF：westock search 沪深300ETF --type etf → sh510300
 2. 搜索 ETF：westock search 创业板ETF --type etf → sz159915
 3. 批量查询档案：westock etf profile sh510300,sz159915
@@ -732,7 +730,7 @@ AI 步骤：
 ```
 用户："分析一下沪深300ETF的溢折率情况"
 
-AI 步骤：
+操作步骤：
 1. 查询运作概览：westock etf overview sh510300
 2. 解析 etfDisc（溢折率）、etfDiscAvg*（同指数平均溢折率）
 3. 判断溢价/折价程度及与同类 ETF 的对比
@@ -744,7 +742,7 @@ AI 步骤：
 ```
 用户："沪深300ETF的基金经理稳定吗？历任都有谁？"
 
-AI 步骤：
+操作步骤：
 1. 查询基金档案：westock etf profile sh510300
 2. 解析 managerHistory：
    - current（当前在任）：与 first（首任）一致 → 经理"超长稳定"
@@ -765,7 +763,7 @@ AI 步骤：
 ```
 用户："当前宏观经济面怎么样？"
 
-AI 步骤：
+操作步骤：
 1. 查询最新核心宏观指标：westock macro indicator cn_core
 2. 解析返回的各项核心指标数据（会自动返回 p1 和 p2 两个数据集）
 3. 从 GDP 增速、CPI/PPI、PMI、社融、M2 等维度综合分析
@@ -777,7 +775,7 @@ AI 步骤：
 ```
 用户："看看最近半年PMI走势"
 
-AI 步骤：
+操作步骤：
 1. 查询 PMI 区间数据：westock macro indicator cn_pmi --start 2024 --end 2025
 2. 提取每月 PMI 数值（制造业/非制造业/综合）
 3. 分析 PMI 是否连续处于荣枯线（50）以上
@@ -790,7 +788,7 @@ AI 步骤：
 ```
 用户："分析一下最新的GDP数据"
 
-AI 步骤：
+操作步骤：
 1. 查询全部 GDP 相关指标：westock macro indicator cn_gdp,cn_cpi_ppi,cn_consumption,cn_investment --year 2025
 2. 解析 GDP 增速（实际 vs 名义）
 3. 分析 CPI/PPI 价格走势（通胀/通缩信号）
@@ -803,7 +801,7 @@ AI 步骤：
 ```
 用户："当前货币政策环境如何？"
 
-AI 步骤：
+操作步骤：
 1. 查询货币指标：westock macro indicator cn_financing,cn_fundquantity,cn_fundcost --year 2025
 2. 分析社融规模（financing）→ 实体经济融资需求
 3. 分析 M1/M2 增速（fundquantity）→ 货币供应宽松度
@@ -817,7 +815,7 @@ AI 步骤：
 ```
 用户："PMI下滑对A股有什么影响？"
 
-AI 步骤：
+操作步骤：
 1. 查询 PMI 趋势：westock macro indicator cn_pmi --start 2024 --end 2025
 3. 对比 PMI 走势与指数走势的相关性
 4. 分析 PMI 下行期间哪些板块受影响更大
@@ -829,7 +827,7 @@ AI 步骤：
 ```
 用户："最近通胀压力怎么样？"/"CPI和PPI差距说明什么？"
 
-AI 步骤：
+操作步骤：
 1. 查询价格指标：westock macro indicator cn_cpi_ppi --start 2024 --end 2025
 2. 关注核心指标：
    - CPI_YOY（CPI 同比）vs CPI_YOY_CORE（核心 CPI，剔除食品和能源）
@@ -849,7 +847,7 @@ AI 步骤：
 ```
 用户："看看国债收益率曲线"/"长短端利差怎么样？"/"是牛陡还是熊平？"
 
-AI 步骤：
+操作步骤：
 1. 查询收益率曲线：westock macro indicator cn_yield_curve --year 2025
 2. 查询期限利差与曲线形态：westock macro indicator cn_term_spread --date <最新>
 3. 关注核心字段：
@@ -873,7 +871,7 @@ AI 步骤：
 ```
 用户："现在股票贵不贵？"/"股债怎么选？"/"红利股有性价比吗？"
 
-AI 步骤：
+操作步骤：
 1. 查询溢价率最新水平：westock macro indicator cn_premium_value --date <最新>
 2. 查询溢价率历史曲线（约 2400 条日频）：westock macro indicator cn_premium_curve --date <最新>
 3. 关注核心字段：
@@ -896,7 +894,7 @@ AI 步骤：
 ```
 用户："央行最近在投放还是回笼？"/"MLF 利率怎么走？"
 
-AI 步骤：
+操作步骤：
 1. 查询公开市场操作 MLF：westock macro indicator cn_mlf --year 2025
 2. 查询货币市场利率：westock macro indicator cn_fundcost --year 2025
 3. 关注核心字段：
@@ -926,7 +924,7 @@ AI 步骤：
 ```
 用户："现在国际金价多少？"
 
-AI 步骤：
+操作步骤：
 1. 关键词找代码：westock search 黄金 --type futures → fuGC（COMEX黄金）
 3. 解析最新价、涨跌幅、货币单位（USD）
 4. 说明为延时行情（isDelayed），并给出生成时间
@@ -937,7 +935,7 @@ AI 步骤：
 ```
 用户："WTI原油期货的合约规格是怎样的？"
 
-AI 步骤：
+操作步骤：
 1. 关键词找代码：westock search 原油 --type futures → fuCL（WTI原油，NYMEX）
 2. 查询合约资料：westock futures detail fuCL
 3. 解析交易所、合约规模、货币币种、最小变动单位、交易时间、所在时区
@@ -955,7 +953,7 @@ AI 步骤：
 ```
 用户："离岸人民币现在多少？"
 
-AI 步骤：
+操作步骤：
 1. 关键词找代码：westock search 离岸 --type forex → fxCNH（离岸人民币）
 3. 解析最新价、涨跌幅
 4. 给出生成时间
@@ -966,7 +964,7 @@ AI 步骤：
 ```
 用户："美元日元近一个月走势如何？"
 
-AI 步骤：
+操作步骤：
 1. 关键词找代码：westock search 美元日元 --type forex → fxUSDJPY
 2. 查询日K：westock kline fxUSDJPY --period day --limit 30
 3. 解析区间高低点、涨跌幅，描述趋势
@@ -984,7 +982,7 @@ AI 步骤：
 ```
 用户："兴业转债现在行情怎么样？转股价值和溢价率高不高？"
 
-AI 步骤：
+操作步骤：
    （可转债走专属字段集，除价格/成交外额外返回转债维度，单只竖排「项目/内容」表展示）
 2. 解析通用字段：最新价、涨跌幅、成交额
 3. 解析转债维度：转股价值（bond_equity_value）、转股溢价率（bond_equity_premium）、
@@ -998,7 +996,7 @@ AI 步骤：
 ```
 用户："兴业转债的规模、到期日和赎回回售条款是什么？"
 
-AI 步骤：
+操作步骤：
    → 总规模（bond_total_size）、剩余规模（bond_undue_size）、到期日（bond_due_date）、
      到期收益率（bond_ytm）、强赎触发价/回售触发价
 2. 详情看完整发行要素与条款：westock bond sh113052
@@ -1008,4 +1006,4 @@ AI 步骤：
 
 ---
 
-**记住**：westock 是数据查询工具，AI 负责数据分析和洞察！
+**记住**：westock 只负责数据查询，分析判断由使用者完成。

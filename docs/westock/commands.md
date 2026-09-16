@@ -1,4 +1,6 @@
-# WeStock Data - 详细命令用法
+# 命令用法
+
+[← 返回目录](../../WESTOCK.md)
 
 > 本文档包含所有命令的完整语法、参数说明、使用示例。
 > 按功能分组组织，便于快速查找。
@@ -39,7 +41,7 @@ westock kline sh600000 --start 2025-06-01                     # 仅指定起始�
 ```
 
 > **K 线说明**：`westock kline` 返回历史 K 线序列，**数据有延迟，不代表盘中实时价**；展示时必须标注数据日期，勿称「实时行情」。
-> `westock search` 不支持多代码批量；`westock fund flow` 跨市场须分开查。完整列表见 [SKILL.md](../SKILL.md) 或 [routing-guide.md §六/§九](./routing-guide.md)。
+> `westock search` 不支持多代码批量；`westock fund flow` 跨市场须分开查。完整列表见 [WESTOCK.md](../../WESTOCK.md) 或 [routing-guide.md §三/§六](./routing-guide.md)。
 > **K线日期范围**：`westock kline` 支持 `--start` / `--end`（YYYY-MM-DD），优先级高于 `--limit`；范围模式下 `--limit` 仅作为返回条数上限保护，默认放宽到 2000。仅指定 `--start` 时 `end` 默认今天；仅指定 `--end` 时自动按周期回溯一段窗口。**期货/外汇 K 线暂不支持日期范围**，传入会自动降级到 `--limit` 模式并提示。
 > **涨跌幅与连涨连跌口径**：涨跌幅 = 最新收盘 / 基准价 − 1，基准价为统计区间起始日**前一交易日**收盘（算「近 N 日涨跌」须 `--limit N+1`，取最早一根收盘为基准）；连涨连跌、金叉/死叉均按**已收盘交易日**判定，不含当日盘中。
 > **统一 `westock search`**：**默认仅搜股票**（A股/港股/美股个股）；用 `--type etf|bond|sector|index|futures|forex` 切换到其它类型，`--type` 支持**逗号分隔多个类型同时搜**（如 `--type etf,index,sector`，按类型分组输出）。⚠️ **港股/美股/沪深不要加 `--market`**（默认搜索已覆盖），`--market` 仅接受 `jp|kr`，传 `hk`/`us`/`hs` 会报错。
@@ -560,7 +562,7 @@ westock etf nav sh510300 --start 2026-01-01 --end 2026-03-31
 
 > `westock search --type etf`：`etfDetail=支持` 可走 `westock etf *`，`仅行情` 走 `westock kline`。
 
-> 详细字段说明见 [references/ai_usage_guide.md](./ai_usage_guide.md)
+> 详细字段说明见 [ai_usage_guide.md](./ai_usage_guide.md)
 
 ---
 
