@@ -61,9 +61,11 @@ export class StockSymbolService {
         const codes = await this.stockSdkService.getCodes(market)
         // 统一各市场的代码格式（详见 toStoredCode）
         const stored = codes.map((code) => this.toStoredCode(market, code))
-        const inserted = await this.insertMissing(market, stored)
+        const inserted = await this.upsert(market, stored)
         results.push({ market, total: stored.length, inserted })
-        this.logger.log(`[${market}] 上游 ${stored.length} 条, 新增 ${inserted} 条`)
+        this.logger.log(
+          `[${market}] 上游 ${stored.length} 条, 新增 ${inserted} 条, 其余已存在(有变化则更新)`
+        )
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         this.logger.error(`[${market}] 同步失败: ${message}`)
@@ -115,15 +117,20 @@ export class StockSymbolService {
   }
 
   /**
-   * 批量插入并忽略冲突，实现增量更新
+   * 写入标的代码：以 `code` 为唯一键的 upsert
    *
-   * 用 `ON CONFLICT DO NOTHING`（TypeORM 的 `orIgnore()`）而非「先查后插」：
-   * 一次往返、无竞态，也避免为数千条代码逐条查询。
+   * - 不存在 → 新增
+   * - 已存在且 `market` 有变化 → 更新
+   * - 已存在且无变化 → 不写入（`skipUpdateIfNoValuesChanged` 让 PG 生成
+   *   `WHERE ... IS DISTINCT FROM ...`，避免无意义的写放大）
    *
-   * 新增数取插入前后的 count 差值，而非 InsertResult.identifiers ——
-   * 后者在 DO NOTHING 时的语义不确定（可能包含被忽略的行）。
+   * 用 ON CONFLICT 而非「先查后插」：一次往返、无竞态，
+   * 也避免为数千条代码逐条查询。
+   *
+   * 返回值取插入前后的 count 差值，即**新增数**——更新不改变总数，
+   * 故无法由此得出更新条数（日志中只报新增与上游总数）。
    */
-  private async insertMissing(market: CodesMarket, codes: string[]): Promise<number> {
+  private async upsert(market: CodesMarket, codes: string[]): Promise<number> {
     if (codes.length === 0) return 0
 
     const before = await this.symbolRepo.count({ where: { market } })
@@ -135,7 +142,8 @@ export class StockSymbolService {
         .insert()
         .into(StockSymbol)
         .values(rows)
-        .orIgnore()
+        // 冲突键为 code；冲突时只更新 market，且值未变化时不产生写入
+        .orUpdate(['market'], ['code'], { skipUpdateIfNoValuesChanged: true })
         .execute()
     }
 

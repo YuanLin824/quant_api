@@ -38,7 +38,8 @@
 10. **信号默认回溯窗口**: `GET /stock-sdk/kline/:market/:code/signals` 未传 `startDate` 时按 `period` 套用默认窗口（日线 1 月 / 周线 6 月 / 月线 36 月），避免默认扫描全历史。基准时间取 `endDate`（若提供）或当前时间，保证窗口不会落在查询区间之外。
 
 11. **每日标的代码同步**: `StockSymbolScheduler` 每天 09:00（开盘前）触发（`@Cron` 显式指定 `timeZone: 'Asia/Shanghai'`——容器多为 UTC，不指定会相差 8 小时），把 A股/美股/港股/基金代码同步到 `stock_symbols` 表。
-    - **增量更新**：用 `INSERT ... ON CONFLICT DO NOTHING`（TypeORM 的 `orIgnore()`）而非「先查后插」——一次往返、无竞态，也避免为数千条代码逐条查询；已存在的不修改，也不删除退市记录
+    - **以 `code` 为唯一键的 upsert**：不存在则新增，已存在且 `market` 有变化时更新，无变化则不写入——`skipUpdateIfNoValuesChanged` 让 PostgreSQL 生成 `WHERE ... IS DISTINCT FROM ...`，避免无意义的写放大；不删除退市记录
+    - 用 `ON CONFLICT` 而非「先查后插」：一次往返、无竞态，也避免为数千条代码逐条查询。`code` 已统一为「市场前缀 + 代码」（`sh600000` / `usAAPL` / `hk00700`），因此本身全局唯一
     - **各市场相互独立**：单个失败只记录并继续，下次任务自然补上
     - **异常自洽**：任务内全量 try/catch，绝不向调度器抛出——全局异常过滤器依赖 HTTP 上下文（`host.switchToHttp()`），捕获 cron 异常会在过滤器内二次报错
 
