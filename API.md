@@ -47,13 +47,16 @@ Authorization: Bearer <access_token>
 
 ### 错误响应
 
-`code` 与 HTTP 状态码保持一致，`message` 为具体的错误原因：
+`code` 与 HTTP 状态码保持一致，`message` 为具体的错误原因。
+
+> 错误响应由全局异常过滤器直接拼装，键顺序为 `code` / `data` / `message`，
+> 与成功响应（控制器返回值）的 `code` / `message` / `data` 不同。
 
 ```json
 {
   "code": 401,
-  "message": "访问令牌无效或已过期",
-  "data": null
+  "data": null,
+  "message": "访问令牌无效或已过期"
 }
 ```
 
@@ -64,8 +67,8 @@ DTO 校验失败时，`message` 直接给出具体的校验错误；多条错误
 ```json
 {
   "code": 400,
-  "message": "股票代码必须是数组",
-  "data": null
+  "data": null,
+  "message": "股票代码必须是数组"
 }
 ```
 
