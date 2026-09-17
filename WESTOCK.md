@@ -1,23 +1,30 @@
 # WeStock Data
 
+> ⚠️ **本文档描述的不是 API 的 `westock` 模块，当前也无代码使用它**
+>
+> 本文件与 `docs/westock/` 描述的是腾讯发布的 Go CLI（`src/scripts/westock.exe`，能力更广：
+> K线/板块/资金/技术指标/研报等），保留作为后续扩展的参考。
+> API 的 `/api/westock/*` 接口基于 `src/scripts/westock-data-clawhub.mjs`（另一个第三方 CLI 的单文件 bundle），
+> 文档见 [docs/api/westock.md](./docs/api/westock.md)。
+
 腾讯自选股数据接口的 CLI 封装（`westock`），提供金融市场结构化数据查询：股票（A股/港股/美股）、ETF、指数、板块、期货、外汇、可转债的 K 线、技术指标、筹码、财报、研报、公告、风险事件、股东、分红、ETF 持仓、新股/投资日历、龙虎榜；另含行业经营数据、申万行业估值/盈利预测/财务与全球宏观经济。
 
 不同标的与市场支持的维度差异较大，具体命令与能力矩阵见 [routing-guide.md](./docs/westock/routing-guide.md)。
 
 ## 获取二进制
 
-二进制**不入库**（约 3.1MB），需先下载到本仓库的 `scripts/` 目录。
+二进制**不入库**（约 3.1MB），需先下载到本仓库的 `src/scripts/` 目录。
 
 ```bash
 # 手动获取（三选一；幂等：目标已存在则跳过）
-bash scripts/setup.sh            # macOS / Linux
-pwsh -File scripts/setup.ps1     # Windows (PowerShell)
-node scripts/setup.cjs           # 跨平台（Node ≥ 18）
+bash src/scripts/setup.sh            # macOS / Linux
+pwsh -File src/scripts/setup.ps1     # Windows (PowerShell)
+node src/scripts/setup.cjs           # 跨平台（Node ≥ 18）
 
 # 需要重新拉取时加：setup.cjs 用 --force，setup.sh 用 -f，setup.ps1 用 -Force
 ```
 
-`npm run start:dev`、`npm run build` 等命令会经 npm 的 `pre` 钩子自动执行 `node scripts/setup.cjs`，通常无需手动调用。
+`npm run start:dev`、`npm run build` 等命令会经 npm 的 `pre` 钩子自动执行 `node src/scripts/setup.cjs`，通常无需手动调用。
 
 > **二进制缺失时**：重跑上述任一脚本（幂等，不会重复下载已存在的文件）。不要用 `export PATH`、猜路径或 `find /` 找二进制。
 
@@ -27,10 +34,10 @@ node scripts/setup.cjs           # 跨平台（Node ≥ 18）
 
 **调用方式**：`<bin> <子命令> [参数]`，`<bin>` 按下表取二进制路径（脚本只落地文件，不写 PATH）：
 
-| 平台          | 二进制路径                                                                 |
-| ------------- | -------------------------------------------------------------------------- |
-| Windows       | `.\scripts\westock.exe`（PowerShell）/ `./scripts/westock.exe`（Git Bash） |
-| macOS / Linux | `./scripts/westock`                                                        |
+| 平台          | 二进制路径                                                                         |
+| ------------- | ---------------------------------------------------------------------------------- |
+| Windows       | `.\src\scripts\westock.exe`（PowerShell）/ `./src/scripts/westock.exe`（Git Bash） |
+| macOS / Linux | `./src/scripts/westock`                                                            |
 
 统一 Go CLI，需网络。下文示例中的 `westock` 均指该二进制，实际执行时代入对应路径。
 
@@ -170,7 +177,7 @@ westock etf profile sh510300
 
 ## 异常与空结果
 
-1. **二进制缺失 / 无法执行**：重跑 `node scripts/setup.cjs`（或对应平台脚本）后重试。
+1. **二进制缺失 / 无法执行**：重跑 `node src/scripts/setup.cjs`（或对应平台脚本）后重试。
 2. **命令报错**：按 CLI 返回的提示排查。
 3. **空结果**：区分「代码不支持该维度」与「该时点无披露」（必要时先 `westock search` 确认代码）。
 4. **能力不支持**：如美股无 `westock fund flow`，见 [routing-guide.md §三](./docs/westock/routing-guide.md#三能力差异速查标的--维度)。

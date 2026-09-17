@@ -128,3 +128,37 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 ### TDX - 获取上海证券交易所全量证券列表（自动分页，响应较大）
 GET {{baseUrl}}/tdx/stocks/sh
 Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### ========== 证券数据（WeStock）==========
+# 内部通过子进程调用 src/scripts/westock-data-clawhub.mjs，单次约 400ms
+
+
+### WeStock - 搜索证券代码（不传 scope 时含股票与基金）
+GET {{baseUrl}}/westock/search?keyword=腾讯
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### WeStock - 只搜股票
+GET {{baseUrl}}/westock/search?keyword=银行&scope=stock
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### WeStock - 只搜基金
+GET {{baseUrl}}/westock/search?keyword=银行&scope=fund
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### WeStock - 搜索无结果（仍返回 200，rows 为空数组）
+GET {{baseUrl}}/westock/search?keyword=zzz不存在
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### WeStock - 当日分时
+GET {{baseUrl}}/westock/minute?code=sh600519
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### WeStock - 五日分时（比当日多一列 date）
+GET {{baseUrl}}/westock/minute?code=sh600519&days=5
+Authorization: Bearer {{login.response.body.data.accessToken}}

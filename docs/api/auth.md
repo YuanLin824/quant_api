@@ -210,7 +210,7 @@ GET /api/auth/profile
 Authorization: Bearer <access_token>
 ```
 
-**限流**: 未单独配置，走全局默认（每 60 秒 100 次）
+**限流**: 未单独配置，走全局默认（每 60 秒 60 次）
 
 **请求头**
 
