@@ -13,7 +13,7 @@
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "lint-staged": "lint-staged",
     "prepare": "npm run setup:westock && husky",
-    "setup:westock": "node src/scripts/setup.cjs",
+    "setup:westock": "node src/scripts/setup.cjs -f",
     "prestart": "npm run setup:westock",
     "start": "nest start",
     "start:debug": "nest start --debug --watch",
