@@ -916,12 +916,10 @@ westock market-overview list               # 列出所有 type
 
 ### 板块成份股分析
 
-> ⚠️ **概念股查询重点**：当用户问"XX概念有哪些股票"（如"华为概念股"、"AI概念股"、"新能源汽车概念"），必须使用统一 `westock search` 入口两步查询：
+> ⚠️ **概念股查询重点**：当用户问"XX概念有哪些股票"（如"华为概念股"、"AI概念股"、"新能源汽车概念"），用统一 `westock search` 入口两步查询：
 >
 > 1. `westock search 华为 --type sector` — 搜索板块代码
 > 2. `westock sector constituent <搜索到的代码>` — 查询成份股
->
-> **不要用外部搜索工具**。
 
 **板块代码格式**：
 
