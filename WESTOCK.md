@@ -24,7 +24,8 @@ node src/scripts/setup.cjs           # 跨平台（Node ≥ 18）
 # 需要重新拉取时加：setup.cjs 用 --force，setup.sh 用 -f，setup.ps1 用 -Force
 ```
 
-`npm run start:dev`、`npm run build` 等命令会经 npm 的 `pre` 钩子自动执行 `node src/scripts/setup.cjs`，通常无需手动调用。
+`npm install` 后会经 `prepare` 钩子自动执行一次 `npm run setup:westock`（即 `setup.cjs -f`，强制刷新），通常无需手动调用。
+`start` / `build` 等命令不再触发获取——若二进制被清理掉，需按上面的方式手动重跑。
 
 > **二进制缺失时**：重跑上述任一脚本（幂等，不会重复下载已存在的文件）。不要用 `export PATH`、猜路径或 `find /` 找二进制。
 

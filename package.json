@@ -6,7 +6,6 @@
   "license": "MIT",
   "author": "YuanLin",
   "scripts": {
-    "prebuild": "npm run setup:westock",
     "build": "cross-env NODE_ENV=prod nest build",
     "commit": "czg",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -14,7 +13,6 @@
     "lint-staged": "lint-staged",
     "prepare": "npm run setup:westock && husky",
     "setup:westock": "node src/scripts/setup.cjs -f",
-    "prestart": "npm run setup:westock",
     "start": "nest start",
     "start:debug": "nest start --debug --watch",
     "start:dev": "cross-env NODE_ENV=dev nest start --watch",
