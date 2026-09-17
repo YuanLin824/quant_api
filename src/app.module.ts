@@ -14,6 +14,7 @@ import { PostgresModule } from './database/postgres.module'
 import { RedisModule } from './database/redis.module'
 import { RedisService } from './database/redis.service'
 import { TdxModule } from './tdx/tdx.module'
+import { WestockModule } from './westock/westock.module'
 
 // @Global() 使本模块的 providers/exports 在所有子模块中可直接注入，无需重复 import
 @Global()
@@ -34,12 +35,12 @@ import { TdxModule } from './tdx/tdx.module'
       // 仅注册全局通用配置, 数据库/Redis 配置由各模块自行 forFeature 注册
       load: [GLOBAL_CONFIG],
     }),
-    // 全局限流：每个 IP 在 60 秒内最多 100 次请求
+    // 全局限流：每个 IP 在 60 秒内最多 60 次请求
     ThrottlerModule.forRoot({
       throttlers: [
         {
           ttl: 60000, // 60 秒
-          limit: 100, // 最多 100 次请求
+          limit: 60, // 最多 60 次请求
         },
       ],
       // 库的默认文案 "ThrottlerException: Too Many Requests" 会把框架内部类名下发给调用方
@@ -49,6 +50,7 @@ import { TdxModule } from './tdx/tdx.module'
     RedisModule,
     AuthModule,
     TdxModule,
+    WestockModule,
   ],
 
   controllers: [AppController],

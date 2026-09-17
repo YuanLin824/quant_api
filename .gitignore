@@ -3,10 +3,12 @@
 /node_modules
 /build
 
-# WESTOCK CLI 二进制（由 scripts/setup.* 下载到 scripts/，或技能包自带）。
-# 单个约 3.1MB，入库会让仓库体积翻倍且二进制无法增量压缩，故一律不入库
-*.exe
-/scripts/westock
+# WESTOCK CLI 二进制（腾讯 Go CLI，由 src/scripts/setup.* 下载）。
+# 两个平台的产物都不入库：Windows 为 westock.exe，Unix 文件名无扩展名。
+# 单个约 3.1MB，入库会让仓库体积翻倍且二进制无法增量压缩。
+# 注意：同目录的 westock-data-clawhub.mjs 是纯文本 bundle，需入库，不受此规则影响
+/src/scripts/westock
+/src/scripts/westock.*
 
 # Logs
 # winston 生产环境输出目录：按小时轮转，归档为 .gz（如 2026-09-11-10.info.log.gz），
