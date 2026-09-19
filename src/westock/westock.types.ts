@@ -59,7 +59,7 @@ export interface WestockKlineResult {
    * 起始日期（未指定时为 `null`）
    *
    * 本模块**不做补齐**，只在显式传入时转发——上游的默认区间是
-   * `[1990-12-01, 当日]`，详见 docs/api/westock.md。
+   * `[1990-12-01, 当日]`，详见 docs/api-westock.md。
    */
   start?: string
   /** 结束日期（未指定时为 `null`；上游默认取当日） */

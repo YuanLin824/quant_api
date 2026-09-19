@@ -59,10 +59,11 @@ npm run commit             # czg 交互式生成符合 commitlint 规范的提�
 
 ## 更多文档
 
-| 文档                                  | 说明                             |
-| ------------------------------------- | -------------------------------- |
-| [架构设计](./.claude/architecture.md) | 模块结构、关键设计决策、安全机制 |
-| [环境变量](./.claude/environment.md)  | 必需和可选环境变量配置           |
-| [开发流程](./.claude/development.md)  | 启动服务、默认账户、文档结构     |
-
-接口文档入口为 [API.md](./API.md)，按模块拆分到 `docs/` 目录。
+| 文档                                      | 说明                                                 |
+| ----------------------------------------- | ---------------------------------------------------- |
+| [架构设计](./.claude/architecture.md)     | 模块结构、关键设计决策、安全机制                     |
+| [环境变量](./.claude/environment.md)      | 必需和可选环境变量配置                               |
+| [开发流程](./.claude/development.md)      | 启动服务、默认账户、文档结构                         |
+| [API 文档](./API.md)                      | 基础信息、认证与限流、错误码；拆分到 `docs/api-*.md` |
+| [WESTOCK CLI](./WESTOCK_CLI.md)           | westock（腾讯 Go CLI）命令用法                       |
+| [WESTOCK DATA](./WESTOCK_DATA_CLAWHUB.md) | westock-data-clawhub 命令用法                        |

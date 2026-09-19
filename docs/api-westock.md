@@ -1,6 +1,6 @@
 # 证券数据（WeStock）
 
-[← 返回目录](../../API.md)
+[← 返回目录](../API.md)
 
 > 所有接口需要 JWT 认证，请在请求头中携带 `Authorization: Bearer <access_token>`
 >

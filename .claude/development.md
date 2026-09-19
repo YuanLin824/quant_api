@@ -45,21 +45,21 @@
 
 ## 接口调试
 
-- `REST_CLIENT.http` — VS Code REST Client 可直接执行的接口集合，覆盖健康检查、认证与全部通达信行情接口
+- `REST_CLIENT.http` — VS Code REST Client 可直接执行的接口集合，覆盖健康检查、认证、通达信与证券数据（WeStock）接口
 - 该文件可直接复用登录接口返回的 `accessToken`（通过 `{{login.response.body.data.accessToken}}` 变量引用）
 
 ## 文档结构
 
-文档位于项目根目录与 `docs/` 下，按用途分两个子目录：
+文档位于项目根目录与 `docs/` 下：
 
 - `API.md` — API 文档入口，包含基础信息、认证与限流说明、通用响应格式、错误码与数据库错误映射
-- `WESTOCK.md` — WESTOCK CLI 工具说明（获取二进制、调用方式、使用约定、高频命令速查）
-- `docs/api/health.md` — 健康检查接口
-- `docs/api/auth.md` — 认证接口（注册、登录、刷新、登出、用户信息、修改密码、登出所有设备）
-- `docs/api/tdx.md` — 通达信接口（K线、五档盘口、当日与历史分时、当日与历史分笔成交、证券数量与列表）
-- `docs/api/config.md` — 系统配置（认证机制、环境变量、开发环境）
-- `docs/api/westock.md` — 证券数据（搜索、分时、K线；表格列随命令变化、503/504 错误说明）
-- `docs/westock/` — WESTOCK CLI 参考手册（路由速查 / 命令语法 / 场景模板 / 字段说明 / 宏观指标）
+- `WESTOCK_CLI.md` — westock（腾讯 Go CLI）命令行接口手册（按分类列出各命令的用法、参数与示例）
+- `WESTOCK_DATA_CLAWHUB.md` — westock-data-clawhub CLI 用法（npx 包，命令语法与示例）
+- `docs/api-health.md` — 健康检查接口
+- `docs/api-auth.md` — 认证接口（注册、登录、刷新、登出、用户信息、修改密码、登出所有设备）
+- `docs/api-tdx.md` — 通达信接口（K线、五档盘口、当日与历史分时、当日与历史分笔成交、证券数量与列表）
+- `docs/api-config.md` — 系统配置（认证机制、环境变量、开发环境）
+- `docs/api-westock.md` — 证券数据（搜索、分时、K线；表格列随命令变化、503/504 错误说明）
 
-> `docs/api/` 下的文档顶部有返回 `API.md` 的导航链接，`docs/westock/` 下的返回 `WESTOCK.md`。
+> `docs/api-*.md` 的文档顶部有返回 `API.md` 的导航链接。
 > 接口有变动时需同步更新对应文档（见 `CLAUDE.md` 代码规范）。

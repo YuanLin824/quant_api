@@ -5,11 +5,11 @@
 ## 目录
 
 - [基础信息](#基础信息)
-- [系统配置](./docs/api/config.md)
-- [健康检查](./docs/api/health.md)
-- [认证接口](./docs/api/auth.md)
-- [通达信（TDX）接口](./docs/api/tdx.md)
-- [证券数据（WeStock）](./docs/api/westock.md)
+- [系统配置](./docs/api-config.md)
+- [健康检查](./docs/api-health.md)
+- [认证接口](./docs/api-auth.md)
+- [通达信（TDX）接口](./docs/api-tdx.md)
+- [证券数据（WeStock）](./docs/api-westock.md)
 
 ## 基础信息
 
@@ -23,7 +23,7 @@
 | 接口分组   | 路径前缀       | 认证要求                                       | 限流                 |
 | ---------- | -------------- | ---------------------------------------------- | -------------------- |
 | 健康检查   | `/api/health`  | 否                                             | 全局 60 秒 60 次     |
-| 认证接口   | `/api/auth`    | 各接口不同，详见[认证接口](./docs/api/auth.md) | 各接口不同，见该文档 |
+| 认证接口   | `/api/auth`    | 各接口不同，详见[认证接口](./docs/api-auth.md) | 各接口不同，见该文档 |
 | 通达信 TDX | `/api/tdx`     | 是（access token）                             | 不限流               |
 | 证券数据   | `/api/westock` | 是（access token）                             | 全局 60 秒 60 次     |
 
