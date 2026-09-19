@@ -32,13 +32,6 @@ function lastArgs(): string[] {
   return (mockExecFile.mock.calls[0][1] as string[]).slice(1)
 }
 
-const SEARCH_STDOUT = `
-| code | name | type |
-| --- | --- | --- |
-| hk00700 | 腾讯控股 | GP |
-| usTCEHY.PS | 腾讯控股(ADR) | GP |
-`
-
 const MINUTE_STDOUT = `
 | code | time | price | volume | amount |
 | --- | --- | --- | --- | --- |
@@ -51,43 +44,6 @@ describe('WestockDataService', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     service = new WestockDataService()
-  })
-
-  describe('search', () => {
-    it('返回列名与行数据', async () => {
-      stubExecFile({ stdout: SEARCH_STDOUT })
-
-      const result = await service.search('腾讯')
-
-      expect(result.keyword).toBe('腾讯')
-      expect(result.columns).toEqual(['code', 'name', 'type'])
-      expect(result.total).toBe(2)
-      expect(result.rows[0]).toEqual({ code: 'hk00700', name: '腾讯控股', type: 'GP' })
-    })
-
-    it('无结果时返回空表格且不抛异常', async () => {
-      stubExecFile({ stdout: '数据为空' })
-
-      const result = await service.search('zzz')
-
-      expect(result).toEqual({ keyword: 'zzz', scope: undefined, columns: [], rows: [], total: 0 })
-    })
-
-    it('scope 作为 --<scope> 参数传入', async () => {
-      stubExecFile({ stdout: SEARCH_STDOUT })
-
-      await service.search('银行', 'fund')
-
-      expect(lastArgs()).toEqual(['search', '银行', '--fund'])
-    })
-
-    it('未指定 scope 时不追加参数', async () => {
-      stubExecFile({ stdout: SEARCH_STDOUT })
-
-      await service.search('腾讯')
-
-      expect(lastArgs()).toEqual(['search', '腾讯'])
-    })
   })
 
   describe('minute', () => {
@@ -126,9 +82,9 @@ describe('WestockDataService', () => {
 
   describe('调用方式', () => {
     it('经 node 执行 clawhub 入口（而非直接执行 bin）', async () => {
-      stubExecFile({ stdout: SEARCH_STDOUT })
+      stubExecFile({ stdout: MINUTE_STDOUT })
 
-      await service.search('腾讯')
+      await service.minute('sh600519')
 
       const [file, args] = mockExecFile.mock.calls[0] as [string, string[]]
       expect(file).toBe(process.execPath)
@@ -142,16 +98,16 @@ describe('WestockDataService', () => {
     it('「执行失败」（退出码为 0）→ 503', async () => {
       stubExecFile({ stdout: '执行失败 [MKT_ERROR]: 不支持的市场: badcode123' })
 
-      const promise = service.search('badcode123')
+      const promise = service.minute('badcode123')
       await expect(promise).rejects.toBeInstanceOf(ServiceUnavailableException)
       await expect(promise).rejects.toThrow('证券数据服务返回异常，请稍后重试')
     })
 
     it('非零退出码 → 503，且 stderr 原文不进 message', async () => {
       const error = Object.assign(new Error('Command failed'), { code: 1 })
-      stubExecFile({ error, stderr: 'Error: 请提供搜索关键词\n示例: westock-data search 腾讯' })
+      stubExecFile({ error, stderr: 'Error: 内部异常\n示例: westock-data minute sh600519' })
 
-      const promise = service.search('腾讯')
+      const promise = service.minute('sh600519')
       await expect(promise).rejects.toBeInstanceOf(ServiceUnavailableException)
       await expect(promise).rejects.toThrow('证券数据服务调用失败，请稍后重试')
       await expect(promise).rejects.not.toThrow(/示例/)
@@ -161,7 +117,7 @@ describe('WestockDataService', () => {
       const error = Object.assign(new Error('spawn ENOENT'), { code: 'ENOENT' })
       stubExecFile({ error })
 
-      const promise = service.search('腾讯')
+      const promise = service.minute('sh600519')
       await expect(promise).rejects.toBeInstanceOf(ServiceUnavailableException)
       await expect(promise).rejects.toThrow('证券数据组件不可用，请稍后重试')
     })
@@ -180,7 +136,7 @@ describe('WestockDataService', () => {
     const child = fakeChild()
     mockExecFile.mockImplementation(() => child) // 回调不触发，模拟仍在运行
 
-    void service.search('腾讯')
+    void service.minute('sh600519')
     service.onModuleDestroy()
 
     expect(child.kill).toHaveBeenCalled()

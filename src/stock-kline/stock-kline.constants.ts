@@ -47,7 +47,7 @@ export const PRICE_UNITS_PER_YUAN = 1000
 /**
  * 实时查询的条数：默认 240，上限 1000
  *
- * 上游是 `westock` CLI（`--limit`），上限即它自己声明的 `KLINE_MAX_LIMIT`。
+ * 上游是 `westock` CLI（`--limit`），它自己**不声明上限**，此值由本模块自设。
  * **但它同样会静默少返回**——实测同一个 `--limit 5000` 的请求只回了 2494 行，
  * HTTP 侧无任何限流提示；故 DTO 必须自己挡住越界值。
  */

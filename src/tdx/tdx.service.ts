@@ -6,7 +6,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import type { Exchange, KlineCategory } from 'node-tdx-market'
+import type { KlineCategory } from 'node-tdx-market'
 import { TdxClient } from 'node-tdx-market'
 import { ENV_KEYS } from '../config/constants'
 import { KLINE_CATEGORY_MAP, type KlinePeriodKey } from './tdx.constants'
@@ -65,55 +65,6 @@ export class TdxService implements OnModuleInit, OnModuleDestroy {
       ...(start !== undefined ? { start } : {}),
       ...(count !== undefined ? { count } : {}),
     })
-  }
-
-  /** 获取五档盘口（支持批量） */
-  async getQuotes(codes: string | string[]) {
-    await this.ensureConnected()
-
-    return this.client.getQuote(codes)
-  }
-
-  /** 获取当日分时数据 */
-  async getMinute(code: string) {
-    await this.ensureConnected()
-
-    return this.client.getMinute(code)
-  }
-
-  /** 获取历史分时数据（date 为 YYYYMMDD 数字） */
-  async getHistoryMinute(code: string, date: number) {
-    await this.ensureConnected()
-
-    return this.client.getHistoryMinute(code, date)
-  }
-
-  /** 获取当日分笔成交 */
-  async getTrade(code: string, start?: number, count?: number) {
-    await this.ensureConnected()
-
-    return this.client.getTrade(code, start, count)
-  }
-
-  /** 获取历史分笔成交（date 为 YYYYMMDD 数字） */
-  async getHistoryTrade(code: string, date: number, start?: number, count?: number) {
-    await this.ensureConnected()
-
-    return this.client.getHistoryTrade(code, date, start, count)
-  }
-
-  /** 获取指定交易所的证券数量 */
-  async getStockCount(exchange: Exchange) {
-    await this.ensureConnected()
-
-    return this.client.getStockCount(exchange)
-  }
-
-  /** 获取指定交易所的全部证券列表（库内自动分页拉取） */
-  async getStockList(exchange: Exchange) {
-    await this.ensureConnected()
-
-    return this.client.getStockList(exchange)
   }
 
   /**

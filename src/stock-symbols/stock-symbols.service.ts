@@ -172,12 +172,6 @@ export class StockSymbolsService {
     return after - before
   }
 
-  /** 按市场查询代码列表（升序） */
-  async getByMarket(market: StockSymbolMarket): Promise<string[]> {
-    const rows = await this.symbolRepo.find({ where: { market }, order: { code: 'ASC' } })
-    return rows.map((row) => row.code)
-  }
-
   /** 各市场的代码数量统计 */
   async getStats(): Promise<Record<string, number>> {
     const rows = await this.symbolRepo

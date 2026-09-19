@@ -8,14 +8,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **TdxModule / WestockCliModule / WestockDataModule / StockSdkModule 是内部数据源，不对外暴露 HTTP 接口**，只供其他模块注入：
 
-- **TdxModule** — 基于 `node-tdx-market`（通达信 TCP 协议）直连行情服务器，提供 K线/五档盘口/分时/分笔成交/证券列表
+- **TdxModule** — 基于 `node-tdx-market`（通达信 TCP 协议）直连行情服务器，只提供 **K 线**（库的盘口/分时/证券列表等能力本项目用不上，已删）
 - **WestockCliModule** — 通过子进程调用腾讯 Go CLI（`src/scripts/westock.exe`），提供 K 线与统一搜索
-- **WestockDataModule** — 通过子进程调用 `src/scripts/westock-data-clawhub.mjs`（单文件 bundle），提供搜索与分时
+- **WestockDataModule** — 通过子进程调用 `src/scripts/westock-data-clawhub.mjs`（单文件 bundle），提供分时（搜索已收敛到 WestockCliModule）
 - **StockSdkModule** — 通过 `stock-sdk`（npm 包，HTTP 公开数据源）获取 A股/港股/美股/基金代码，纯透传不落库
 
 对外提供的行情接口只有三个模块：
 
-- **StockSymbolsModule** — 每日 08:00 定时通过 `stock-sdk` 同步全量证券代码入库，提供手动触发与数量统计接口（具体代码的获取是 service 内部能力）
+- **StockSymbolsModule** — 每日 08:00 定时通过 `stock-sdk` 同步全量证券代码入库，提供手动触发与数量统计接口（**不提供代码列表**，其他模块直接查 `stock_symbols` 表）
 - **StockSearchModule** — 经 WestockCliModule **按关键词实时搜索**（不落库），支持类型/市场/分页；多类型时响应**按类型分段**
 - **StockKlineModule** — 每日 16:00 经 TdxModule 同步 A 股全市场日线（首次回补近两年，之后增量补最新几根）落库到 `daily_klines` 表；`GET /api/stock-kline` 查询走 WestockCliModule（腾讯 Go CLI）**实时拉取、不读库**，由 `period`（`m1`~`m120`/`day`/`week`/`month`/`season`/`year`）+ `fq`（`qfq`/`hfq`/`bfq`/`nofq`，不传为上游默认的前复权）+ `start`（默认 `1990-07-31`）+ `end`（可选）限定
 
@@ -68,11 +68,13 @@ npm run commit             # czg 交互式生成符合 commitlint 规范的提�
 
 ## 更多文档
 
-| 文档                                      | 说明                                                 |
-| ----------------------------------------- | ---------------------------------------------------- |
-| [架构设计](./.claude/architecture.md)     | 模块结构、关键设计决策、安全机制                     |
-| [环境变量](./.claude/environment.md)      | 必需和可选环境变量配置                               |
-| [开发流程](./.claude/development.md)      | 启动服务、默认账户、文档结构                         |
-| [API 文档](./API.md)                      | 基础信息、认证与限流、错误码；拆分到 `docs/api-*.md` |
-| [WESTOCK CLI](./WESTOCK_CLI.md)           | westock（腾讯 Go CLI）命令用法                       |
-| [WESTOCK DATA](./WESTOCK_DATA_CLAWHUB.md) | westock-data-clawhub 命令用法                        |
+| 文档                                      | 说明                                                                                        |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [架构设计](./.claude/architecture.md)     | 模块结构、关键设计决策、安全机制                                                            |
+| [环境变量](./.claude/environment.md)      | 必需和可选环境变量配置                                                                      |
+| [开发流程](./.claude/development.md)      | 启动服务、默认账户、文档结构                                                                |
+| [API 文档](./API.md)                      | 基础信息、认证与限流、错误码；拆分到 `docs/api-*.md`                                        |
+| [WESTOCK CLI](./WESTOCK_CLI.md)           | westock（腾讯 Go CLI）命令用法                                                              |
+| [WESTOCK DATA](./WESTOCK_DATA_CLAWHUB.md) | westock-data-clawhub 命令用法                                                               |
+| [TDX 库](./TDX.md)                        | `node-tdx-market` 的 API 手册（K线/盘口/分时/分笔/证券列表）；本项目只用了 K 线             |
+| [龙头策略](./STOCK_LEADER_STRATEGY.md)    | 龙头股五维识别框架；末两节的「数据清单」与「最小可行数据版本」对应本 API 要提供哪些行情数据 |

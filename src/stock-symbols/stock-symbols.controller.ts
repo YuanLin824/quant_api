@@ -7,8 +7,9 @@ import { StockSymbolsService } from './stock-symbols.service'
  *
  * 定时任务每天 08:00 自动同步，这两个接口用于手动触发与查看结果。
  *
- * **不提供查询具体代码的接口**——那属于内部能力（`StockSymbolsService.getByMarket`），
- * 由其他模块按需注入使用；对外只暴露各市场的**数量统计**。
+ * **不提供查询具体代码的接口**——对外只暴露各市场的**数量统计**。
+ * 需要代码列表的模块直接注入 `StockSymbol` 仓储查表（如 `StockKlineService`），
+ * 按关键词查具体标的则走 `StockSearchModule`。
  *
  * 不豁免限流：手动同步会实打实地拉取数据源的全量数据并批量写库，不是轻量的读接口。
  */

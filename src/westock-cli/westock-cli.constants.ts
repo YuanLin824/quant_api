@@ -42,17 +42,17 @@ export const KLINE_FQ_VALUES = ['qfq', 'hfq', 'bfq', 'nofq'] as const
 export type KlineFq = (typeof KLINE_FQ_VALUES)[number]
 
 /**
- * 返回条数：默认 240（约一个交易日的分钟数），上限 1000
+ * 返回条数：默认 240（约一个交易日的分钟数）
  *
- * 上限取值依据：控制单次响应体量、降低触发上游限流的概率。
- * 代价是**拉不满全量历史**——上游数据源起点约 2006 年（连 1991 年上市的
+ * 条数上限**不在本层设**——CLI 未声明上限，实际由调用方的 DTO 把关
+ * （如 `stock-kline` 的 1–1000）。这里只定「不传时给多少」。
+ *
+ * 无论取多少都**拉不满全量历史**：上游数据源起点约 2006 年（连 1991 年上市的
  * sz000001 最早也只到 2006-03-08），全量约 4900 个交易日。
- *
- * 1000 根折合：日线约 4.1 年，m5 约 3.5 个交易日，m1 约 1.7 个交易日。
+ * 1000 根折合约：日线 4.1 年、m5 3.5 个交易日、m1 1.7 个交易日；
  * 需要更长历史时改用 `--start`/`--end` 分段取。
  */
 export const KLINE_DEFAULT_LIMIT = 240
-export const KLINE_MAX_LIMIT = 1_000
 
 /** 日期参数格式（`--start` / `--end`） */
 export const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
@@ -110,7 +110,7 @@ export const SEARCH_DEFAULT_LIMIT = 10
  * 单次搜索的条数上限
  *
  * CLI 自身**未声明**上限（实测 `--limit 1000` 可全量返回），此值是本模块为控制
- * 响应体量、降低触发上游限流的概率而自设的——与 `KLINE_MAX_LIMIT` 同一考量。
+ * 响应体量、降低触发上游限流的概率而自设的。
  */
 export const SEARCH_MAX_LIMIT = 100
 

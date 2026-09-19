@@ -41,9 +41,8 @@ A 股的交易所前缀**编码在代码里**（上游把 A 股视作一个整�
 `stock-sdk` 的 `codes.*` 返回**纯字符串数组**，不提供名称、每手股数、小数位等属性，
 因此 `stock_symbols` 表只有 `market` 与 `code` 两列。
 
-> 需要**名称**等信息时，可用内部的 `WestockDataService.search`（带名称，但需关键词）
-> 或 `TdxService.getStockList`（带名称与每手股数，但只覆盖沪深京）—— 两者都是内部服务，
-> 当前**不对外暴露 HTTP 接口**。
+> 需要**名称**等信息时，走 [`GET /api/stock-search`](./api-stock-search.md)——它按关键词实时检索、
+> 返回带名称，是当前唯一能拿到名称的对外接口。
 
 ### 同步语义
 
@@ -128,8 +127,8 @@ Authorization: Bearer <access_token>
 | `cn` / `hk` / `us` / `fund` | 各市场的代码数量；某市场同步失败时键可能缺失 |
 
 > **本接口只返回数量，不返回具体代码列表。**
-> 具体代码的获取能力（`StockSymbolsService.getByMarket`）保留在 service 层，
-> 供其他模块按需注入使用；也可直接查 `stock_symbols` 表。
+> 需要代码的模块直接注入 `StockSymbol` 仓储查 `stock_symbols` 表（`StockKlineService` 即如此）；
+> 按关键词查具体标的走 [`GET /api/stock-search`](./api-stock-search.md)。
 
 **错误响应**
 

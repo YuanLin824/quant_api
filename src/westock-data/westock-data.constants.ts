@@ -3,26 +3,21 @@ import { resolve } from 'path'
 /**
  * `westock-data-clawhub` 的契约常量
  *
- * 这个 CLI（命令名 `westock-data`）提供**搜索**与**分时**。
- * K 线由另一个 CLI（腾讯 Go CLI，见 `WestockCliService`）提供——本 CLI 的 kline
- * 不支持分钟周期，传 `m1`/`5m` 等会**静默回退到日线**。
+ * 这个 CLI（命令名 `westock-data`）在本项目里**只用来取分时**——搜索已由腾讯 Go CLI
+ * 承接（见 `WestockCliService.search`，支持类型/市场/分页，能力更强）。
+ * K 线同样在 Go CLI 那边：本 CLI 的 kline **不支持分钟周期**，
+ * 传 `m1`/`5m` 等会**静默回退到日线**。
  *
  * 集中存放「参数取值」与「输出格式」两类知识——CLI 升级时只需改本文件。
  * 以下形态均经实测确认。
  */
 
 /**
- * 搜索范围
+ * 分时天数默认值：1 = 当日，2~5 = 五日
  *
- * CLI 另支持 `--sector`，但实测对所有关键词均**无任何输出**（退出码 0），
- * 功能实际不可用，故不对外暴露。
+ * 上限（5 天）**不在本层设**：实测传入大于 5 也只返回 5 天，是 CLI 自己截断的。
  */
-export const SEARCH_SCOPES = ['stock', 'fund'] as const
-export type SearchScope = (typeof SEARCH_SCOPES)[number]
-
-/** 分时天数：1 = 当日，2~5 = 五日；实测传入大于 5 也只返回 5 天 */
 export const MINUTE_DEFAULT_DAYS = 1
-export const MINUTE_MAX_DAYS = 5
 
 /**
  * clawhub 入口

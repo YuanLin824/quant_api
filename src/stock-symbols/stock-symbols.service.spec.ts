@@ -157,13 +157,6 @@ describe('StockSymbolsService', () => {
   })
 
   describe('查询', () => {
-    it('按市场查询返回升序代码数组', async () => {
-      repo.find.mockResolvedValue([{ code: 'sh600036' }, { code: 'sh600000' }])
-
-      await expect(service.getByMarket('cn')).resolves.toEqual(['sh600036', 'sh600000'])
-      expect(repo.find).toHaveBeenCalledWith({ where: { market: 'cn' }, order: { code: 'ASC' } })
-    })
-
     it('统计返回各市场数量', async () => {
       repo.createQueryBuilder.mockReturnValue({
         select: jest.fn().mockReturnThis(),

@@ -81,7 +81,9 @@ psql "$PG_URL" -f db/002-daily-klines.sql
 npm run setup:westock
 ```
 
-> 缺失时不会导致应用起不来，但**相关的 K 线/搜索/分时接口会返回 503** 并提示该命令。
+> 缺失时不会导致应用起不来，但**用到它的接口会返回 503** 并提示该命令：
+> `westock.exe` 对应 K 线与搜索接口；`westock-data-clawhub.mjs` 当前**无接口在用**
+> （只剩 `WestockDataService.minute` 这一内部能力，且无生产调用方）。
 >
 > `nest-cli.json` 已把 `src/scripts/**` 同步到 `dist/scripts/`，故 prod 下路径解析与 dev 一致，
 > 且可在目标机器上直接跑 `dist/scripts/setup.*` 重新获取。

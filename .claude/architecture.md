@@ -6,15 +6,15 @@
 - **AppSetup** (`src/app.setup.ts`) — 应用公共装配（Helmet / CORS / 全局前缀 / 校验管道），由 `main.ts` 与 e2e 测试共用，避免测试环境与线上配置漂移
 - **AppController / AppService** (`src/app.controller.ts` / `src/app.service.ts`) — 健康检查接口，返回服务状态、版本号、运行时长与内存占用
 - **AuthModule** (`src/auth/`) — 认证模块，JWT 双密钥方案（access + refresh token）
-- **TdxModule** (`src/tdx/`) — 行情数据能力（基于 `node-tdx-market`，通达信 TCP 协议）：K线 / 五档盘口（批量） / 当日与历史分时 / 当日与历史分笔成交 / 证券数量 / 全量证券列表。**内部服务，不对外暴露 HTTP 接口**
+- **TdxModule** (`src/tdx/`) — **K 线**能力（基于 `node-tdx-market`，通达信 TCP 协议）。库还支持五档盘口/分时/分笔成交/证券列表，但本项目用不上，那些方法已从 `TdxService` 删除。**内部服务，不对外暴露 HTTP 接口**
 - **WestockCliModule** (`src/westock-cli/`) — K 线能力（子进程调用腾讯 Go CLI `westock.exe`）。**内部服务，不对外暴露 HTTP 接口**
-- **WestockDataModule** (`src/westock-data/`) — 搜索与分时能力（子进程调用 `westock-data-clawhub` bundle）。**内部服务，不对外暴露 HTTP 接口**
+- **WestockDataModule** (`src/westock-data/`) — **分时**能力（子进程调用 `westock-data-clawhub` bundle）。**内部服务，不对外暴露 HTTP 接口**
 - **StockSdkModule** (`src/stock-sdk/`) — 证券代码能力（`stock-sdk` npm 包，HTTP 公开数据源），纯透传、不落库。**内部服务，不对外暴露 HTTP 接口**
 - **StockSymbolsModule** (`src/stock-symbols/`) — 标的代码模块，每日定时同步全量股票代码（A股/港股/美股/基金）入库，并提供手动触发与查询接口
 - **StockKlineModule** (`src/stock-kline/`) — K 线模块。落库路径每日盘后经 TdxModule 同步 A 股全市场**日线**入库（首次回补近两年），并提供手动触发与概览统计；**实时查询**路径经 WestockCliModule 拉取、不读库、周期任选
 - **StockSearchModule** (`src/stock-search/`) — 证券搜索模块，经 WestockCliModule 按关键词实时检索（不落库），支持类型/市场/分页
 - **Common** (`src/common/`) — 跨模块共享件：`BaseEntity` 实体基类、全局异常过滤器、请求日志中间件、校验装饰器
-  - `common/cli/` — 两个 westock CLI 服务（`westock-cli` / `westock-data`）的共用层：`CliRunnerBase`（子进程调用与错误分类）、`table-parser`（输出解析）、通用常量与类型
+  - `common/cli/` — 两个 westock CLI 服务（`westock-cli` / `westock-data`）的共用层：`CliRunnerBase`（子进程调用与错误分类）、两个输出解析器（`table-parser` 扁平表格 / `section-parser` 分段表格）、通用常量与类型
 - **Config** (`src/config/`) — 配置集中管理：`ENV_KEYS` 常量、`registerAs` 命名空间配置、Winston 日志器
 - **PostgresModule** (`src/database/postgres.module.ts`) — TypeORM 数据源配置
 - **RedisModule** (`src/database/redis.module.ts`) — ioredis 连接管理
@@ -42,7 +42,8 @@
    - **失败时 `data` 恒为 `null`**：具体原因一律由 `message` 承载，不再把 Nest 的原始响应对象塞进 `data`（那会让 `{ message, error, statusCode }` 与顶层字段重复）
    - **校验错误并入 `message`**：ValidationPipe 抛出的 `BadRequestException`，其 `exception.message` 只有固定的 `Bad Request Exception`，故优先取 `getResponse().message` 数组并以 `; ` 连接，保证调用方能定位到具体参数
 
-8. **通达信行情模块**: `TdxModule` (`src/tdx/`) 基于 `node-tdx-market`（通达信 TCP 协议）提供行情数据能力，**作为内部服务供其他模块注入**（不对外暴露 HTTP 接口，目前的消费者是 `StockKlineModule`）。
+8. **通达信行情模块**: `TdxModule` (`src/tdx/`) 基于 `node-tdx-market`（通达信 TCP 协议）提供 **K 线**能力，**作为内部服务供其他模块注入**（不对外暴露 HTTP 接口，目前的消费者是 `StockKlineModule`）。
+   - **只保留 `getKline`**：`TdxService` 原封装的五档盘口 / 当日与历史分时 / 历史分笔成交 / 证券数量 / 全量证券列表均已无调用方而删除——分时与搜索归 westock 的两个 CLI，证券列表归 `stock-sdk`。`tdx.constants.ts` 里配套的 `EXCHANGE_MAP` / `KLINE_PERIODS` / `DEFAULT_KLINE_PERIOD` / `KLINE_MAX_COUNT` / `MINUTE_PERIODS` 等**常量**同样无人引用，一并清掉（只留 `KLINE_CATEGORY_MAP` 与 `KlinePeriodKey`）
    - **长连接管理**：与服务端维持一条 TCP 长连接（区别于常见的 HTTP 行情接口）。启动时主动建连但**不阻塞应用启动**——行情服务不可达只记 warn；请求前检查连接状态（懒连接兜底），断线重连由库的 `autoReconnect` 负责；模块销毁时断开
    - **价格单位为厘（元 × 1000）**：上游解析结果**原样返回**，不在服务层做字段级换算——需要「元」的调用方（如 `StockKlineService`）自行 ÷1000
    - **连接不可用时返回 503**（而非 500）：区分「依赖服务不可用」与「服务内部错误」
@@ -50,8 +51,9 @@
 
 9. **CLI 子进程调用**: 本项目用 `execFile` 调用第三方 CLI，是本项目**唯一使用子进程**的地方。公共部分（execFile 调用、超时与错误分类、在途进程的生命周期、输出解析）抽在 `CliRunnerBase`（`src/common/cli/cli-runner.base.ts`），由两个服务继承：
    - `WestockCliService`（`src/westock-cli/`）→ K 线，直接执行 Go CLI 二进制
-   - `WestockDataService`（`src/westock-data/`）→ 搜索、分时，经 `node <bundle入口>` 执行
-   - **用到两个 CLI，能力互补**：`westock-data-clawhub`（`src/scripts/` 下的单文件 bundle，不入库）负责 search 与 minute；腾讯 Go CLI（`src/scripts/westock.exe`，由 setup 脚本下载）负责 kline。之所以不能统一——clawhub 的 kline **不支持分钟周期**（传 `m1`/`5m` 等会**静默回退到日线**，调用方会拿到错误粒度的数据），而 Go CLI 没有 minute 命令
+   - `WestockDataService`（`src/westock-data/`）→ **仅 minute**，经 `node <bundle入口>` 执行
+   - **两个 CLI 都还得留着**：`westock-data-clawhub`（`src/scripts/` 下的单文件 bundle，不入库）与腾讯 Go CLI（`src/scripts/westock.exe`，由 setup 脚本下载）。**kline 与 minute 只能各归一边**——clawhub 的 kline **不支持分钟周期**（传 `m1`/`5m` 等会**静默回退到日线**，调用方会拿到错误粒度的数据），而 Go CLI 没有 minute 命令
+   - **search 曾经两边都有，现已收敛到 Go CLI**（见第 13 条）：clawhub 的 search 只能按关键词查、无类型/市场/分页，Go CLI 的能力全面覆盖且更强，故 `WestockDataService.search` 已删除并停止调用 clawhub 的 search 子命令
    - **两者启动方式不同**：bundle 经 `process.execPath` 执行入口（Windows 下 `.bin` 是 shell 脚本，execFile 无法直接运行），Go CLI 直接执行二进制
    - **由 nest-cli 的 assets 同步到 `dist/`**：`dist/` 是 `src/` 的镜像，但 tsc 只编译 `.ts`，故 `nest-cli.json` 需显式配置把 `src/scripts/**` 拷进 `dist/scripts/`，否则 prod（`node dist/main`）找不到入口。用 `**` 而非只拷 `.mjs`，是为了让 dist 自包含——二进制缺失时可在目标机器直接跑 `dist/scripts/setup.*` 重新获取。有此配置后，`src/westock-cli/`（及 `src/westock-data/`）与 `dist/` 下的对应目录都可用 `../scripts/` 定位，dev 与 prod 的路径解析一致
    - **bundle 扩展名必须是 `.mjs`**：源文件是 ESM，而本项目 `package.json` 无 `type: module`，用 `.js` 会让 Node 先按 CommonJS 解析失败再回退重解析——既慢又喷 warning
