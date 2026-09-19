@@ -7,7 +7,7 @@
 - **AppController / AppService** (`src/app.controller.ts` / `src/app.service.ts`) — 健康检查接口，返回服务状态、版本号、运行时长与内存占用
 - **AuthModule** (`src/auth/`) — 认证模块，JWT 双密钥方案（access + refresh token）
 - **TdxModule** (`src/tdx/`) — 行情模块，基于 `node-tdx-market`（通达信 TCP 协议），提供 K线 / 五档盘口（批量） / 当日与历史分时 / 当日与历史分笔成交 / 证券数量 / 全量证券列表
-- **WestockModule** (`src/westock/`) — 证券数据模块，通过子进程调用 `src/scripts/westock-data-clawhub.mjs`，提供按关键词搜索证券代码与当日/五日分时数据
+- **WestockModule** (`src/westock/`) — 证券数据模块，通过子进程调用两个第三方 CLI，提供证券搜索、当日/五日分时与 K 线数据
 - **Common** (`src/common/`) — 跨模块共享件：`BaseEntity` 实体基类、全局异常过滤器、请求日志中间件、校验装饰器
 - **Config** (`src/config/`) — 配置集中管理：`ENV_KEYS` 常量、`registerAs` 命名空间配置、Winston 日志器
 - **PostgresModule** (`src/database/postgres.module.ts`) — TypeORM 数据源配置
@@ -41,16 +41,17 @@
    - **连接不可用时返回 503**（而非 500）：区分「依赖服务不可用」与「服务内部错误」
    - **不使用库的 `KlineCategory`**：它是 `declare const enum`，与 tsconfig 的 `isolatedModules: true` 冲突（值位置不可用），改用 `tdx.constants.ts` 的数值映射表，对调用方暴露 `1m`/`day`/`week` 等语义化取值
 
-9. **WeStock 子进程调用**: `WestockService` 用 `execFile` 调用 `src/scripts/westock-data-clawhub.mjs`，是本项目**唯一使用子进程**的地方。
-   - **入口置于仓库而非走 npm 依赖**：该 CLI 是单文件 bundle（无自身依赖），取出放入 `src/scripts/` 后无需安装即可用，也免去 `node_modules` 的存在性依赖
+9. **WeStock 子进程调用**: `WestockService` 用 `execFile` 调用第三方 CLI，是本项目**唯一使用子进程**的地方。
+   - **用到两个 CLI，能力互补**：`westock-data-clawhub`（`src/scripts/` 下的单文件 bundle，不入库）负责 search 与 minute；腾讯 Go CLI（`src/scripts/westock.exe`，由 setup 脚本下载）负责 kline。之所以不能统一——clawhub 的 kline **不支持分钟周期**（传 `m1`/`5m` 等会**静默回退到日线**，调用方会拿到错误粒度的数据），而 Go CLI 没有 minute 命令
+   - **两者启动方式不同**：bundle 经 `process.execPath` 执行入口（Windows 下 `.bin` 是 shell 脚本，execFile 无法直接运行），Go CLI 直接执行二进制
    - **由 nest-cli 的 assets 同步到 `dist/`**：`dist/` 是 `src/` 的镜像，但 tsc 只编译 `.ts`，故 `nest-cli.json` 需显式配置把 `src/scripts/**` 拷进 `dist/scripts/`，否则 prod（`node dist/main`）找不到入口。用 `**` 而非只拷 `.mjs`，是为了让 dist 自包含——二进制缺失时可在目标机器直接跑 `dist/scripts/setup.*` 重新获取。有此配置后，`src/westock/` 与 `dist/westock/` 都可用 `../scripts/` 定位，dev 与 prod 的路径解析一致
-   - **扩展名必须是 `.mjs`**：源文件是 ESM，而本项目 `package.json` 无 `type: module`，用 `.js` 会让 Node 先按 CommonJS 解析失败再回退重解析——既慢又喷 warning
-   - **经 `process.execPath` 执行入口**而非直接执行：Windows 下若走 `.bin`（它是 shell 脚本）execFile 无法直接运行
-   - **参数以数组传递、不经 shell**：天然免疫命令注入
-   - **退出码不可靠**：CLI 对「无结果」与「参数非法」都返回退出码 0，仅凭退出码无法区分。故一律解析输出内容——已知的无结果文案视为空结果（返回空数组，非错误），解析不出表格则报 503
-   - **输出无 JSON 开关**：成功时是一张扁平 Markdown 表格，**列随命令变化**（search 三列、minute 当日五列、minute 五日六列）。解析器 `westock.parser.ts` 因此独立成纯函数便于单测，列名一律从表头读取（不硬编码），按 `columns` + 行对象表达
+   - **bundle 扩展名必须是 `.mjs`**：源文件是 ESM，而本项目 `package.json` 无 `type: module`，用 `.js` 会让 Node 先按 CommonJS 解析失败再回退重解析——既慢又喷 warning
+   - **参数以数组传递、不经 shell**：天然免疫命令注入；多代码以逗号分隔**整体作为单个 argv**
+   - **K 线日期参数原样转发、不代填**：`start`/`end` 只在调用方显式传入时才追加，缺的一端交给上游取默认值（`1990-12-01` / 当日）。跨度校验因此也只在两端都传入时才有意义
+   - **退出码不可靠**：两个 CLI 对「无结果」「参数非法」「上游报错」都返回退出码 0，仅凭退出码无法区分。故一律解析输出内容——已知的无结果文案（`数据为空`/`无分时数据`）视为空结果（返回空数组，**非错误**），解析不出表格则报 503
+   - **输出无 JSON 开关**：成功时是一张扁平 Markdown 表格，**列随命令变化**（search 三列、minute 五/六列、kline 九列且多代码时多一列 `code`；多代码另有 `[Batch]` 摘要行，不以 `|` 开头故被自然跳过）。解析器 `westock.parser.ts` 因此独立成纯函数便于单测，列名一律从表头读取（不硬编码），按 `columns` + 行对象表达
    - **超时用 504**（而非 408）：客户端发得快、是上游慢，504 语义更准
-   - **不豁免限流**（与 TdxModule 有意偏离）：每次请求 fork 一个子进程并请求第三方上游，不是复用长连接
+   - **不豁免限流**（与 TdxModule 有意偏离）：每次请求 fork 一个子进程并请求第三方上游，不是复用长连接。上游自身也有限流，密集调用会返回「请求过于频繁」
 
 ## 日志
 

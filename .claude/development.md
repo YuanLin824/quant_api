@@ -58,7 +58,7 @@
 - `docs/api/auth.md` — 认证接口（注册、登录、刷新、登出、用户信息、修改密码、登出所有设备）
 - `docs/api/tdx.md` — 通达信接口（K线、五档盘口、当日与历史分时、当日与历史分笔成交、证券数量与列表）
 - `docs/api/config.md` — 系统配置（认证机制、环境变量、开发环境）
-- `docs/api/westock.md` — 证券数据（搜索与分时、表格列随命令变化、503/504 错误说明）
+- `docs/api/westock.md` — 证券数据（搜索、分时、K线；表格列随命令变化、503/504 错误说明）
 - `docs/westock/` — WESTOCK CLI 参考手册（路由速查 / 命令语法 / 场景模板 / 字段说明 / 宏观指标）
 
 > `docs/api/` 下的文档顶部有返回 `API.md` 的导航链接，`docs/westock/` 下的返回 `WESTOCK.md`。

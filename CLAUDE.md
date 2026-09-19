@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 行情数据由 **TdxModule** 提供——基于 `node-tdx-market`（通达信 TCP 协议）直连行情服务器，提供 K线/五档盘口/分时/分笔成交/证券列表。
 
-证券搜索与分时数据由 **WestockModule** 提供——通过子进程调用 `src/scripts/westock-data-clawhub.mjs`（`westock-data-clawhub` 的单文件 bundle，置于仓库内，不经 npm 安装）。
+证券搜索、分时与 K 线数据由 **WestockModule** 提供——通过子进程调用两个第三方 CLI：`src/scripts/westock-data-clawhub.mjs`（单文件 bundle，置于仓库内）负责搜索与分时，腾讯 Go CLI（`src/scripts/westock.exe`）负责 K 线。
 
 ## 常用命令
 

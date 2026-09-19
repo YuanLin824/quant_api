@@ -162,3 +162,23 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 ### WeStock - 五日分时（比当日多一列 date）
 GET {{baseUrl}}/westock/minute?code=sh600519&days=5
 Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### WeStock - 日 K 线（上限 1000 即约 4 年日线；更长历史需用 start/end 分段取）
+GET {{baseUrl}}/westock/kline?code=sh600519&limit=1000
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### WeStock - 分钟 K 线（注意是 m5 而非 5m；不传日期时上游只返回当天分钟数据）
+GET {{baseUrl}}/westock/kline?code=sh600519&period=m15&limit=240&start=2026-01-01
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### WeStock - 后复权
+GET {{baseUrl}}/westock/kline?code=sh600519&fq=hfq&limit=5
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### WeStock - 多代码（columns 多一个 code 列）
+GET {{baseUrl}}/westock/kline?code=sh600519,hk00700&limit=2
+Authorization: Bearer {{login.response.body.data.accessToken}}
