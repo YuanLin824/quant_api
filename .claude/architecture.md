@@ -10,8 +10,8 @@
 - **WestockCliModule** (`src/westock-cli/`) — K 线能力（子进程调用腾讯 Go CLI `westock.exe`）。**内部服务，不对外暴露 HTTP 接口**
 - **WestockDataModule** (`src/westock-data/`) — 搜索与分时能力（子进程调用 `westock-data-clawhub` bundle）。**内部服务，不对外暴露 HTTP 接口**
 - **StockSdkModule** (`src/stock-sdk/`) — 证券代码能力（`stock-sdk` npm 包，HTTP 公开数据源），纯透传、不落库。**内部服务，不对外暴露 HTTP 接口**
-- **SymbolsModule** (`src/symbols/`) — 标的代码模块，每日定时同步全量股票代码（A股/港股/美股/基金）入库，并提供手动触发与查询接口
-- **KlinesModule** (`src/klines/`) — K 线模块。落库路径每日盘后经 TdxModule 同步 A 股全市场**日线**入库（首次回补近两年），并提供手动触发与概览统计；**实时查询**路径经 WestockCliModule 拉取、不读库、周期任选
+- **StockSymbolsModule** (`src/stock-symbols/`) — 标的代码模块，每日定时同步全量股票代码（A股/港股/美股/基金）入库，并提供手动触发与查询接口
+- **StockKlineModule** (`src/stock-kline/`) — K 线模块。落库路径每日盘后经 TdxModule 同步 A 股全市场**日线**入库（首次回补近两年），并提供手动触发与概览统计；**实时查询**路径经 WestockCliModule 拉取、不读库、周期任选
 - **Common** (`src/common/`) — 跨模块共享件：`BaseEntity` 实体基类、全局异常过滤器、请求日志中间件、校验装饰器
   - `common/cli/` — 两个 westock CLI 服务（`westock-cli` / `westock-data`）的共用层：`CliRunnerBase`（子进程调用与错误分类）、`table-parser`（输出解析）、通用常量与类型
 - **Config** (`src/config/`) — 配置集中管理：`ENV_KEYS` 常量、`registerAs` 命名空间配置、Winston 日志器
@@ -35,15 +35,15 @@
 5. **实体基类**: 业务实体继承 `BaseEntity` (`src/common/base.entity.ts`)，获得 UUID 主键、状态字段、创建/更新时间、软删除支持。
    **例外**：`stock_symbols` 与 `daily_klines` 有意不继承——两者都是「业务主键天然唯一」的纯数据表（`code` / `code + trade_date`），不需要代理键；且带 `delete_at` 会让软删的行一直占住唯一索引位，后续 upsert 命中死行却查不出来。
 
-6. **限流策略**: 全局限流由 `APP_GUARD` 的 `ThrottlerGuard` 提供（60 秒 60 次），`auth` 模块另按接口收紧（注册/登录/改密等）。对外暴露的 `symbols`、`klines` 沿用全局策略——它们会拉全量数据或批量写库，不是轻量读接口。
+6. **限流策略**: 全局限流由 `APP_GUARD` 的 `ThrottlerGuard` 提供（60 秒 60 次），`auth` 模块另按接口收紧（注册/登录/改密等）。对外暴露的 `stock-symbols`、`stock-kline` 沿用全局策略——它们会拉全量数据或批量写库，不是轻量读接口。
 
 7. **异常统一收口**: 全局 `AllExceptionsFilter` 将 HttpException、TypeORM `QueryFailedError`（按 PostgreSQL 错误码映射）及未知异常统一为 `{ code, data, message }`，并记录含客户端 IP 的结构化日志。
    - **失败时 `data` 恒为 `null`**：具体原因一律由 `message` 承载，不再把 Nest 的原始响应对象塞进 `data`（那会让 `{ message, error, statusCode }` 与顶层字段重复）
    - **校验错误并入 `message`**：ValidationPipe 抛出的 `BadRequestException`，其 `exception.message` 只有固定的 `Bad Request Exception`，故优先取 `getResponse().message` 数组并以 `; ` 连接，保证调用方能定位到具体参数
 
-8. **通达信行情模块**: `TdxModule` (`src/tdx/`) 基于 `node-tdx-market`（通达信 TCP 协议）提供行情数据能力，**作为内部服务供其他模块注入**（不对外暴露 HTTP 接口，目前的消费者是 `KlinesModule`）。
+8. **通达信行情模块**: `TdxModule` (`src/tdx/`) 基于 `node-tdx-market`（通达信 TCP 协议）提供行情数据能力，**作为内部服务供其他模块注入**（不对外暴露 HTTP 接口，目前的消费者是 `StockKlineModule`）。
    - **长连接管理**：与服务端维持一条 TCP 长连接（区别于常见的 HTTP 行情接口）。启动时主动建连但**不阻塞应用启动**——行情服务不可达只记 warn；请求前检查连接状态（懒连接兜底），断线重连由库的 `autoReconnect` 负责；模块销毁时断开
-   - **价格单位为厘（元 × 1000）**：上游解析结果**原样返回**，不在服务层做字段级换算——需要「元」的调用方（如 `KlinesService`）自行 ÷1000
+   - **价格单位为厘（元 × 1000）**：上游解析结果**原样返回**，不在服务层做字段级换算——需要「元」的调用方（如 `StockKlineService`）自行 ÷1000
    - **连接不可用时返回 503**（而非 500）：区分「依赖服务不可用」与「服务内部错误」
    - **不使用库的 `KlineCategory`**：它是 `declare const enum`，与 tsconfig 的 `isolatedModules: true` 冲突（值位置不可用），改用 `tdx.constants.ts` 的数值映射表，对调用方暴露 `1m`/`day`/`week` 等语义化取值
 
@@ -56,12 +56,12 @@
    - **bundle 扩展名必须是 `.mjs`**：源文件是 ESM，而本项目 `package.json` 无 `type: module`，用 `.js` 会让 Node 先按 CommonJS 解析失败再回退重解析——既慢又喷 warning
    - **参数以数组传递、不经 shell**：天然免疫命令注入；多代码以逗号分隔**整体作为单个 argv**
    - **K 线日期参数原样转发、不代填**：`start`/`end` 只在调用方显式传入时才追加，缺的一端交给上游取默认值（`1990-12-01` / 当日）。跨度校验因此也只在两端都传入时才有意义。
-     注意「不代填」是 `WestockCliService` 这一层的原则；`KlinesService.getRealtime` 会在**调用它之前**把缺省的 `start` 补成 `1990-07-31`（见第 11 条），补完的值对跨度校验是可⻅的
+     注意「不代填」是 `WestockCliService` 这一层的原则；`StockKlineService.getRealtime` 会在**调用它之前**把缺省的 `start` 补成 `1990-07-31`（见第 11 条），补完的值对跨度校验是可⻅的
    - **退出码不可靠**：两个 CLI 对「无结果」「参数非法」「上游报错」都返回退出码 0，仅凭退出码无法区分。故一律解析输出内容——已知的无结果文案（`数据为空`/`无分时数据`）视为空结果（返回空数组，**非错误**），解析不出表格则报 503
    - **输出无 JSON 开关**：成功时是一张扁平 Markdown 表格，**列随命令变化**（search 三列、minute 五/六列、kline 九列且多代码时多一列 `code`；多代码另有 `[Batch]` 摘要行，不以 `|` 开头故被自然跳过）。解析器 `src/common/cli/table-parser.ts` 因此独立成纯函数便于单测，列名一律从表头读取（不硬编码），按 `columns` + 行对象表达
    - **超时用 504**（而非 408）：客户端发得快、是上游慢，504 语义更准
 
-10. **标的代码定时同步**: `SymbolsService` 每夜全量拉取股票代码并 upsert 入库（`src/symbols/`）。
+10. **标的代码定时同步**: `StockSymbolsService` 每夜全量拉取股票代码并 upsert 入库（`src/stock-symbols/`）。
     - **数据源是 `stock-sdk`**（见第 12 条），不是 TDX。上游返回的是**纯代码数组**（不含名称/每手股数/小数位），故 `stock_symbols` 表只有 `market` 与 `code` 两列
     - **A 股是单一市场 `cn`**：交易所前缀编码在代码里（`sh600036`/`sz000001`/`bj430047`），不像 TDX 那样按交易所分开查询
     - **cron 必须显式指定 timeZone**：容器多为 UTC，不指定会与北京时间差 8 小时。且 `@Cron` 在装饰器求值期（模块 import 时）取参，而 `.env` 要到 `ConfigModule.forRoot()` 才写入 `process.env`，故表达式**作为模块常量而非环境变量**
@@ -70,7 +70,7 @@
     - **只 upsert、从不删除**：上游返回不完整也不会损坏已有数据，故单市场失败无需重试补偿；`skipUpdateIfNoValuesChanged` 让属性无变化的行完全不写，首日之后近乎零写入
     - **`@nestjs/schedule` 12.x 是纯 ESM**：Jest 的 CJS runtime 无法加载它，spec 中需 `jest.mock` 掉装饰器；Node 26 运行时支持 `require(esm)`，应用侧无影响
 
-11. **K 线模块**: `KlinesService` 提供两条**互不依赖**的取数路径（`src/klines/`），且**用的是两个不同的数据源**——落库（`sync`／`getStats`）走 `TdxService`，实时（`getRealtime`，供 `GET /api/klines`）走 `WestockCliService`。
+11. **K 线模块**: `StockKlineService` 提供两条**互不依赖**的取数路径（`src/stock-kline/`），且**用的是两个不同的数据源**——落库（`sync`／`getStats`）走 `TdxService`，实时（`getRealtime`，供 `GET /api/stock-kline`）走 `WestockCliService`。
     - **查询接口走实时而非查库**：库里的数据要等每日 16:00 的同步任务跑完（约 90 分钟）才更新，实时拉取没有这个滞后
     - **两条路径的量纲来源不同**：TDX 原样返回「厘」（元 × 1000），落库时 ÷1000；CLI 直接给「元」。接口层统一为元。⚠️ 但**成交额精度不同**（CLI 侧截断，实测 1972730000 vs TDX 的 1972732160），**不可逐值比对**
     - **响应行的时间字段是 `time` 而非 `tradeDate`**：分钟级必须带上时分，否则同一天的 241 根 1 分钟线会得到同一个标识。入库行仍用 `tradeDate`（列名对齐实体）
@@ -80,7 +80,8 @@
     - **`fq` 不传时不补默认值**：实测上游默认是**前复权**（与 `--fq qfq` 输出逐字节相同），但不落常量——保持与上游默认解耦，上游改了口径这边不会被静默带走。⚠️ **落库路径（TDX）存的是不复权价**，两条路径的数值不可比；且前复权价会随新的除权**回溯变动**，要稳定可比须显式传 `nofq`
     - **`bfq` 对 A 股会触发上游报错**（`service error` → 503），港股正常。取值仍予暴露以与 CLI 对齐
     - **CLI 的列名映射收在 `KLINE_COLUMN_MAP`**：收盘价在 CLI 里叫 **`last`** 而非 `close`，按 `close` 取值只会静默拿到 `undefined`；故取值前先 `assertColumns()`，缺列直接抛 503 而不是返回空值
-    - **`limit` 是上限而非保证**：CLI 会**静默少返回**（实测 `--limit 5000` 只回 2494 行，无任何提示），且各周期有各自的数据深度上限（分钟级仅最近一个交易日）。⚠️ `year` 传 `limit=1000` 会触发上游报错（`[code=1620053001] service error`）→ 503
+    - **`limit` 是上限而非保证**：CLI 会**静默少返回**（实测 `--limit 5000` 只回 2494 行，无任何提示），且各周期有各自的数据深度上限（分钟级仅最近一个交易日）。⚠️ `year` 传 `limit=1000` 会触发上游报错（`[code=1620053001] service error`）→ 503，此为**已知取舍**：不按周期分别设限，`limit` 的 1–1000 全局上界已是唯一约束
+    - **不提供已落库数据的读接口**：`getByCode`（查库）没有调用方，已删除——落库路径只写不读，查询一律走实时。库的价值是留一份可回溯的两年快照，不是作为查询源
     - **入库路径：上游量纲必须显式换算**：`node-tdx-market` 的价格与成交额是「厘」、成交量是「手」，而 `TdxService` 是**原样返回**的。落库时换算为**元**，成交量保持「手」
     - **入库路径：`count` 上限 800 是库内硬编码的静默截断**（`Math.min(request.count, 800)`）。**TDX 无法按日期限定区间**（`start` 是「从最新往前倒推的偏移量」而非日期），只能取完再按两年窗口裁剪
     - **入库路径：`time` 必须按本地时区取日期**：库内 `decodeDayTime` 按进程本地时区构造 `new Date(y, m-1, d, 15, 0)`，走 `toISOString()` 会把交易日整体偏移到前一天
@@ -89,7 +90,7 @@
     - **只保留近两年**：拉取时的 `since` 过滤只管住**本次拉回来的**超期数据，库里随日历滑出窗口的旧行靠每次同步后的**硬删除**（`DELETE ... WHERE trade_date < 两年前`）清理。本表无软删除，删除即物理删除，条数见 `purged`
 
 12. **stock-sdk 代码查询**: `StockSdkService` 封装 `stock-sdk`（npm 包，HTTP 公开数据源）的代码列表能力（`src/stock-sdk/`）。
-    - **服务与模块分工**：`StockSdkService` 只负责**实时获取**（纯透传、不落库、不暴露接口）；`SymbolsModule` 在此之上做定时**落库**（A股/港股/美股/基金四个市场，持久化、可离线查询、可被其他模块直接查表复用）
+    - **服务与模块分工**：`StockSdkService` 只负责**实时获取**（纯透传、不落库、不暴露接口）；`StockSymbolsModule` 在此之上做定时**落库**（A股/港股/美股/基金四个市场，持久化、可离线查询、可被其他模块直接查表复用）
     - **透传接口不落库**：无表结构、无定时任务，数据实时获取
     - 该包是**双格式**（CJS + ESM），不像 `@nestjs/schedule` 那样只有纯 ESM，故 spec 里无需绕开加载问题
 

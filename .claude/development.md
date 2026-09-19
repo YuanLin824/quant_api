@@ -51,9 +51,9 @@
 | 任务名               | 时间                        | 说明                               |
 | -------------------- | --------------------------- | ---------------------------------- |
 | `stock-symbols-sync` | 每天 08:00（Asia/Shanghai） | 同步 A股/港股/美股全量股票代码入库 |
-| `daily-klines-sync`  | 每天 16:00（Asia/Shanghai） | 盘后同步 A 股全市场日 K 线入库     |
+| `stock-kline-sync`   | 每天 16:00（Asia/Shanghai） | 盘后同步 A 股全市场日 K 线入库     |
 
-> cron 表达式与时区是**模块常量**（`src/symbols/symbols.constants.ts`）而非环境变量——
+> cron 表达式与时区是**模块常量**（`src/stock-symbols/stock-symbols.constants.ts`）而非环境变量——
 > `@Cron` 在装饰器求值期（模块 import 时）取参，而 `.env` 要到 `ConfigModule.forRoot()`
 > 执行时才写入 `process.env`，用 `process.env.XXX` 会静默拿到 `undefined`。
 
@@ -88,7 +88,7 @@ npm run setup:westock
 
 ## 接口调试
 
-- `REST_CLIENT.http` — VS Code REST Client 可直接执行的接口集合，覆盖健康检查、认证、标的代码（Symbols）与 K 线（Klines）接口
+- `REST_CLIENT.http` — VS Code REST Client 可直接执行的接口集合，覆盖健康检查、认证、标的代码（StockSymbols）与 K 线（StockKline）接口
 - 该文件可直接复用登录接口返回的 `accessToken`（通过 `{{login.response.body.data.accessToken}}` 变量引用）
 
 ## 文档结构
@@ -101,8 +101,8 @@ npm run setup:westock
 - `docs/api-health.md` — 健康检查接口
 - `docs/api-auth.md` — 认证接口（注册、登录、刷新、登出、用户信息、修改密码、登出所有设备）
 - `docs/api-config.md` — 系统配置（认证机制、环境变量、开发环境）
-- `docs/api-symbols.md` — 标的代码（stock-sdk 数据源，每日定时同步落库、手动触发、数量统计）
-- `docs/api-klines.md` — K 线（盘后同步、单位换算、多周期实时查询）
+- `docs/api-stock-symbols.md` — 标的代码（stock-sdk 数据源，每日定时同步落库、手动触发、数量统计）
+- `docs/api-stock-kline.md` — K 线（盘后同步、单位换算、多周期实时查询）
 - `db/001-stock-symbols.sql` — 标的代码表的生产建表 DDL（生产手工执行一次）
 - `db/002-daily-klines.sql` — 日 K 线表的生产建表 DDL（生产手工执行一次）
 

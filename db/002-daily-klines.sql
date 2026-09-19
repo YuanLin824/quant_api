@@ -3,7 +3,7 @@
 -- 开发环境由 TypeORM 的 synchronize 自动建表，本文件供**生产环境手工执行一次**
 -- （生产 `synchronize = false`，不会自动建表）。
 --
--- 与 src/klines/entities/daily-kline.entity.ts 保持一致。
+-- 与 src/stock-kline/entities/daily-kline.entity.ts 保持一致。
 --
 -- 复合主键 (code, trade_date) 既是业务主键、也是 upsert 的 ON CONFLICT 目标。
 -- 有意不继承 BaseEntity：时序数据没有软删除语义（退市股票的历史行情要保留），

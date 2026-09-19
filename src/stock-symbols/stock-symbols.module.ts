@@ -2,9 +2,9 @@ import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { StockSdkModule } from '../stock-sdk/stock-sdk.module'
 import { StockSymbol } from './entities/stock-symbol.entity'
-import { SymbolsController } from './symbols.controller'
-import { SymbolsScheduler } from './symbols.scheduler'
-import { SymbolsService } from './symbols.service'
+import { StockSymbolsController } from './stock-symbols.controller'
+import { StockSymbolsScheduler } from './stock-symbols.scheduler'
+import { StockSymbolsService } from './stock-symbols.service'
 
 /**
  * 标的代码模块
@@ -13,7 +13,7 @@ import { SymbolsService } from './symbols.service'
  */
 @Module({
   imports: [TypeOrmModule.forFeature([StockSymbol]), StockSdkModule],
-  controllers: [SymbolsController],
-  providers: [SymbolsService, SymbolsScheduler],
+  controllers: [StockSymbolsController],
+  providers: [StockSymbolsService, StockSymbolsScheduler],
 })
-export class SymbolsModule {}
+export class StockSymbolsModule {}

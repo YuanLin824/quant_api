@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { Cron } from '@nestjs/schedule'
-import { KLINES_SYNC_CRON, KLINES_SYNC_JOB_NAME, KLINES_TIMEZONE } from './klines.constants'
-import { KlinesService } from './klines.service'
+import {
+  STOCK_KLINE_SYNC_CRON,
+  STOCK_KLINE_SYNC_JOB_NAME,
+  STOCK_KLINE_TIMEZONE,
+} from './stock-kline.constants'
+import { StockKlineService } from './stock-kline.service'
 
 /**
  * 日 K 线同步调度器
@@ -16,14 +20,14 @@ import { KlinesService } from './klines.service'
  *    会在 `getResponse()` 处二次报错，把真实错误盖掉
  */
 @Injectable()
-export class KlinesScheduler {
-  private readonly logger = new Logger(KlinesScheduler.name)
+export class StockKlineScheduler {
+  private readonly logger = new Logger(StockKlineScheduler.name)
 
-  constructor(private readonly klinesService: KlinesService) {}
+  constructor(private readonly klinesService: StockKlineService) {}
 
-  @Cron(KLINES_SYNC_CRON, {
-    name: KLINES_SYNC_JOB_NAME,
-    timeZone: KLINES_TIMEZONE,
+  @Cron(STOCK_KLINE_SYNC_CRON, {
+    name: STOCK_KLINE_SYNC_JOB_NAME,
+    timeZone: STOCK_KLINE_TIMEZONE,
     // 上次未跑完则跳过本次，避免同进程内重入
     waitForCompletion: true,
   })

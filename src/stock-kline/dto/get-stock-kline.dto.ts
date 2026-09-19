@@ -17,7 +17,7 @@ import {
   type KlineFq,
   type KlinePeriod,
 } from '../../westock-cli/westock-cli.constants'
-import { KLINES_QUERY_MAX_LIMIT } from '../klines.constants'
+import { STOCK_KLINE_QUERY_MAX_LIMIT } from '../stock-kline.constants'
 
 /** 查询 K 线的查询参数 */
 export class GetKlinesQueryDto {
@@ -77,6 +77,6 @@ export class GetKlinesQueryDto {
   @Type(() => Number)
   @IsInt({ message: 'limit 必须是整数' })
   @Min(1, { message: 'limit 最小为 1' })
-  @Max(KLINES_QUERY_MAX_LIMIT, { message: `limit 最大为 ${KLINES_QUERY_MAX_LIMIT}` })
+  @Max(STOCK_KLINE_QUERY_MAX_LIMIT, { message: `limit 最大为 ${STOCK_KLINE_QUERY_MAX_LIMIT}` })
   limit?: number
 }

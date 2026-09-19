@@ -1,5 +1,5 @@
-import { SymbolsScheduler } from './symbols.scheduler'
-import type { SymbolsService } from './symbols.service'
+import { StockSymbolsScheduler } from './stock-symbols.scheduler'
+import type { StockSymbolsService } from './stock-symbols.service'
 
 /**
  * `@nestjs/schedule` 12.x 是**纯 ESM**（`"type": "module"`），而 Jest 跑在 CJS
@@ -17,9 +17,9 @@ jest.mock('@nestjs/schedule', () => ({ Cron: jest.fn(() => jest.fn()) }))
  * `httpAdapter.reply()`）——cron 抛出的异常进入该过滤器会在 `getResponse()`
  * 处二次报错，把真实错误盖掉。
  */
-describe('SymbolsScheduler', () => {
-  function makeScheduler(syncAll: jest.Mock): SymbolsScheduler {
-    return new SymbolsScheduler({ syncAll } as unknown as SymbolsService)
+describe('StockSymbolsScheduler', () => {
+  function makeScheduler(syncAll: jest.Mock): StockSymbolsScheduler {
+    return new StockSymbolsScheduler({ syncAll } as unknown as StockSymbolsService)
   }
 
   it('service 抛错时 handleDaily 必须 resolve（异常不得冒泡到调度器）', async () => {

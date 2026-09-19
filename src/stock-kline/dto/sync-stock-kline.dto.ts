@@ -1,5 +1,5 @@
 import { IsIn, IsOptional } from 'class-validator'
-import type { KlineSyncMode } from '../klines.service'
+import type { StockKlineSyncMode } from '../stock-kline.service'
 
 /** 可选的同步模式 */
 export const KLINE_SYNC_MODES = ['full', 'incremental'] as const
@@ -15,5 +15,5 @@ export class SyncKlinesBodyDto {
    */
   @IsOptional()
   @IsIn(KLINE_SYNC_MODES, { message: `mode 必须是 ${KLINE_SYNC_MODES.join('/')}` })
-  mode?: KlineSyncMode
+  mode?: StockKlineSyncMode
 }

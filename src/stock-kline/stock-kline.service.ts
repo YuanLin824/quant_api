@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm'
 import type { KlineBar } from 'node-tdx-market'
 import { Repository } from 'typeorm'
 import type { TableRow } from '../common/cli/cli.types'
-import { StockSymbol } from '../symbols/entities/stock-symbol.entity'
-import type { SymbolMarket } from '../symbols/symbols.constants'
+import { StockSymbol } from '../stock-symbols/entities/stock-symbol.entity'
+import type { StockSymbolMarket } from '../stock-symbols/stock-symbols.constants'
 import { TdxService } from '../tdx/tdx.service'
 import {
   KLINE_COLUMN_MAP,
@@ -15,21 +15,21 @@ import {
 import { WestockCliService } from '../westock-cli/westock-cli.service'
 import { DailyKline } from './entities/daily-kline.entity'
 import {
-  KLINES_FULL_YEARS,
-  KLINES_INCREMENTAL_BARS,
-  KLINES_MAX_BARS_PER_REQUEST,
-  KLINES_MAX_REPORTED_ERRORS,
-  KLINES_PERIOD,
-  KLINES_QUERY_DEFAULT_LIMIT,
-  KLINES_QUERY_DEFAULT_START,
-  KLINES_QUERY_MAX_LIMIT,
-  KLINES_REQUEST_INTERVAL_MS,
-  KLINES_UPSERT_CHUNK,
   PRICE_UNITS_PER_YUAN,
-} from './klines.constants'
+  STOCK_KLINE_FULL_YEARS,
+  STOCK_KLINE_INCREMENTAL_BARS,
+  STOCK_KLINE_MAX_BARS_PER_REQUEST,
+  STOCK_KLINE_MAX_REPORTED_ERRORS,
+  STOCK_KLINE_PERIOD,
+  STOCK_KLINE_QUERY_DEFAULT_LIMIT,
+  STOCK_KLINE_QUERY_DEFAULT_START,
+  STOCK_KLINE_QUERY_MAX_LIMIT,
+  STOCK_KLINE_REQUEST_INTERVAL_MS,
+  STOCK_KLINE_UPSERT_CHUNK,
+} from './stock-kline.constants'
 
 /** 同步模式 */
-export type KlineSyncMode = 'full' | 'incremental'
+export type StockKlineSyncMode = 'full' | 'incremental'
 
 /**
  * A 股市场键（代码取自 `stock_symbols` 表）
@@ -37,10 +37,10 @@ export type KlineSyncMode = 'full' | 'incremental'
  * `stock-sdk` 把 A 股视作**一个整体**，交易所前缀已编码在代码里（`sh600036`），
  * 故这里只有 `cn` 一个值。
  */
-const A_SHARE_MARKET: SymbolMarket = 'cn'
+const A_SHARE_MARKET: StockSymbolMarket = 'cn'
 
 /** K 线的响应行（数值一律为字符串，避免经 JS number 丢精度） */
-export interface KlineRow {
+export interface StockKlineRow {
   code: string
   /** 日/周/月为 `YYYY-MM-DD`；分钟级为 `YYYY-MM-DD HH:mm` */
   time: string
@@ -53,12 +53,12 @@ export interface KlineRow {
 }
 
 /** 待入库的一行——列名与 `daily_klines` 实体对齐（只有日线落库，故时间只到日） */
-interface KlineInsertRow extends Omit<KlineRow, 'time'> {
+interface StockKlineInsertRow extends Omit<StockKlineRow, 'time'> {
   tradeDate: string
 }
 
 /** 实时查询的可选参数 */
-export interface RealtimeKlineQuery {
+export interface RealtimeStockKlineQuery {
   /** K 线周期，默认日线 */
   period?: KlinePeriod
   /**
@@ -67,7 +67,7 @@ export interface RealtimeKlineQuery {
    * 不复权用 `nofq`——注意落库路径存的是 TDX 的**不复权**价。
    */
   fq?: KlineFq
-  /** 起始日期 `YYYY-MM-DD`，默认 `KLINES_QUERY_DEFAULT_START` */
+  /** 起始日期 `YYYY-MM-DD`，默认 `STOCK_KLINE_QUERY_DEFAULT_START` */
   start?: string
   /** 结束日期 `YYYY-MM-DD`，不传则由上游取当日 */
   end?: string
@@ -76,8 +76,8 @@ export interface RealtimeKlineQuery {
 }
 
 /** 一次同步的汇总 */
-export interface KlineSyncResult {
-  mode: KlineSyncMode
+export interface StockKlineSyncResult {
+  mode: StockKlineSyncMode
   /** 待同步的股票数 */
   total: number
   succeeded: number
@@ -87,7 +87,7 @@ export interface KlineSyncResult {
   /** 本次硬删除的超期行数（早于两年窗口的） */
   purged: number
   durationMs: number
-  /** 失败明细（最多 `KLINES_MAX_REPORTED_ERRORS` 条） */
+  /** 失败明细（最多 `STOCK_KLINE_MAX_REPORTED_ERRORS` 条） */
   errors: string[]
 }
 
@@ -121,7 +121,7 @@ function normalizeTime(date: string): string {
 }
 
 /** CLI 表格行 → 响应行（列名映射见 `KLINE_COLUMN_MAP`，注意收盘价叫 `last`） */
-function toKlineRow(code: string, row: TableRow): KlineRow {
+function toStockKlineRow(code: string, row: TableRow): StockKlineRow {
   return {
     code,
     time: normalizeTime(row[KLINE_COLUMN_MAP.time]),
@@ -161,14 +161,14 @@ function sleep(ms: number): Promise<void> {
  * - **落库（`sync`）**：遍历 A 股全部代码，逐只经 `TdxService`（通达信 TCP 长连接）
  *   拉**日线**并 upsert 入库。实测单次约 20ms，叠加 1 秒间隔后全市场约 5400 只 → **约 90 分钟**。
  * - **实时（`getRealtime`）**：单只经 `WestockCliService`（腾讯 Go CLI 子进程）即时拉取、
- *   不写库，周期任选，供 `GET /api/klines` 使用。
+ *   不写库，周期任选，供 `GET /api/stock-kline` 使用。
  *
  * 两者返回的行情列同名同义（元 / 手），但**成交额精度不同**：CLI 侧会截断
  * （实测 1972730000 vs TDX 的 1972732160），故不要拿两条路径的数据做逐值比对。
  */
 @Injectable()
-export class KlinesService {
-  private readonly logger = new Logger(KlinesService.name)
+export class StockKlineService {
+  private readonly logger = new Logger(StockKlineService.name)
 
   /** 同步中标志：挡住「手动接口连点」与「cron 与手动撞车」 */
   private running = false
@@ -191,7 +191,7 @@ export class KlinesService {
    *
    * 单只股票失败不中断整体（记录后继续），已有数据不受影响——重复执行幂等。
    */
-  async sync(mode?: KlineSyncMode): Promise<KlineSyncResult> {
+  async sync(mode?: StockKlineSyncMode): Promise<StockKlineSyncResult> {
     if (this.running) {
       throw new ConflictException('同步任务正在执行中，请稍后再试')
     }
@@ -200,16 +200,17 @@ export class KlinesService {
     const startedAt = Date.now()
     try {
       const codes = await this.resolveCodes()
-      const effectiveMode: KlineSyncMode =
+      const effectiveMode: StockKlineSyncMode =
         mode ?? ((await this.isTableEmpty()) ? 'full' : 'incremental')
-      const count = effectiveMode === 'full' ? KLINES_MAX_BARS_PER_REQUEST : KLINES_INCREMENTAL_BARS
+      const count =
+        effectiveMode === 'full' ? STOCK_KLINE_MAX_BARS_PER_REQUEST : STOCK_KLINE_INCREMENTAL_BARS
       const since = this.sinceDate()
 
       let succeeded = 0
       let failed = 0
       let rows = 0
       const errors: string[] = []
-      let buffer: KlineInsertRow[] = []
+      let buffer: StockKlineInsertRow[] = []
 
       for (let i = 0; i < codes.length; i++) {
         const code = codes[i]
@@ -217,24 +218,24 @@ export class KlinesService {
         try {
           // TDX 的 start 是「从最新往前倒推的偏移量」（0 = 最新），不是日期——
           // 无法限定区间，只能多取一些再按时间窗自行裁剪
-          const { bars } = await this.tdxService.getKline(code, KLINES_PERIOD, 0, count)
+          const { bars } = await this.tdxService.getKline(code, STOCK_KLINE_PERIOD, 0, count)
           buffer.push(...this.toRows(code, bars, since))
           succeeded++
         } catch (err) {
           failed++
-          if (errors.length < KLINES_MAX_REPORTED_ERRORS) {
+          if (errors.length < STOCK_KLINE_MAX_REPORTED_ERRORS) {
             errors.push(`${code}: ${err instanceof Error ? err.message : String(err)}`)
           }
         }
 
-        if (buffer.length >= KLINES_UPSERT_CHUNK) {
+        if (buffer.length >= STOCK_KLINE_UPSERT_CHUNK) {
           rows += await this.flush(buffer)
           buffer = []
         }
 
         // 串行 + 固定间隔：等上一只结束后再歇 1 秒才发下一次（最后一只不必等）
         if (i < codes.length - 1) {
-          await sleep(KLINES_REQUEST_INTERVAL_MS)
+          await sleep(STOCK_KLINE_REQUEST_INTERVAL_MS)
         }
       }
       rows += await this.flush(buffer)
@@ -271,18 +272,21 @@ export class KlinesService {
    *
    * `[start, end]` 限定取值区间，而 `limit` 取的是该区间**尾部**的 N 根
    * （即区间内最新的一批），**不是**从 `start` 往后数。
-   * CLI 本身就是按时间**降序**输出的，与 `getByCode` 的库查询顺序一致，无需反转。
+   * CLI 本身就是按时间**降序**输出的，无需反转。
    */
-  async getRealtime(code: string, query: RealtimeKlineQuery = {}): Promise<KlineRow[]> {
+  async getRealtime(code: string, query: RealtimeStockKlineQuery = {}): Promise<StockKlineRow[]> {
     // CLI 同样会**静默少返回**，这里再兜一次底（DTO 已挡，防内部调用越界）
-    const limit = Math.min(query.limit ?? KLINES_QUERY_DEFAULT_LIMIT, KLINES_QUERY_MAX_LIMIT)
+    const limit = Math.min(
+      query.limit ?? STOCK_KLINE_QUERY_DEFAULT_LIMIT,
+      STOCK_KLINE_QUERY_MAX_LIMIT
+    )
     const { columns, rows } = await this.westockCliService.kline(code, {
       period: query.period ?? KLINE_DEFAULT_PERIOD,
       // 不传 fq 时**不补**：保持与上游默认（前复权）解耦，上游改了这边不会静默跟着变
       fq: query.fq,
       limit,
       // 不传 start 时补默认值。补了也安全：CLI 只在 start 与 end **同时**给出时才校验跨度
-      start: query.start ?? KLINES_QUERY_DEFAULT_START,
+      start: query.start ?? STOCK_KLINE_QUERY_DEFAULT_START,
       end: query.end,
     })
 
@@ -291,12 +295,7 @@ export class KlinesService {
       assertColumns(columns)
     }
 
-    return rows.map((row) => toKlineRow(code, row))
-  }
-
-  /** 按代码查询**已落库**的日 K 线（按交易日降序） */
-  async getByCode(code: string, limit = 500): Promise<DailyKline[]> {
-    return this.klineRepo.find({ where: { code }, order: { tradeDate: 'DESC' }, take: limit })
+    return rows.map((row) => toStockKlineRow(code, row))
   }
 
   /** 各表的概览统计 */
@@ -341,7 +340,7 @@ export class KlinesService {
 
     if (rows.length === 0) {
       throw new ServiceUnavailableException(
-        '标的代码表为空，请先执行 POST /api/symbols/sync 同步 A 股代码'
+        '标的代码表为空，请先执行 POST /api/stock-symbols/sync 同步 A 股代码'
       )
     }
 
@@ -357,13 +356,13 @@ export class KlinesService {
   /** 全量回补的起始日期（今天往前 N 年） */
   private sinceDate(): string {
     const date = new Date()
-    date.setFullYear(date.getFullYear() - KLINES_FULL_YEARS)
+    date.setFullYear(date.getFullYear() - STOCK_KLINE_FULL_YEARS)
     return toDateString(date)
   }
 
   /** 把上游 bars 转成待入库行（换算单位、按时间窗过滤） */
-  private toRows(code: string, bars: KlineBar[], since: string): KlineInsertRow[] {
-    const rows: KlineInsertRow[] = []
+  private toRows(code: string, bars: KlineBar[], since: string): StockKlineInsertRow[] {
+    const rows: StockKlineInsertRow[] = []
     for (const bar of bars) {
       const row = this.toInsertRow(code, bar)
       // 早于时间窗的丢弃（全量模式会多拿到更早的数据）
@@ -374,7 +373,7 @@ export class KlinesService {
   }
 
   /** 单根 bar → 待入库行（换算单位：厘 → 元；成交量保持上游的「手」） */
-  private toInsertRow(code: string, bar: KlineBar): KlineInsertRow {
+  private toInsertRow(code: string, bar: KlineBar): StockKlineInsertRow {
     return {
       code,
       tradeDate: toDateString(bar.time),
@@ -394,16 +393,16 @@ export class KlinesService {
    * PostgreSQL 会报 `ON CONFLICT DO UPDATE command cannot affect row a second time`，
    * 导致整批失败。
    */
-  private async flush(buffer: KlineInsertRow[]): Promise<number> {
+  private async flush(buffer: StockKlineInsertRow[]): Promise<number> {
     if (buffer.length === 0) return 0
 
     const rows = this.dedupe(buffer)
-    for (let i = 0; i < rows.length; i += KLINES_UPSERT_CHUNK) {
+    for (let i = 0; i < rows.length; i += STOCK_KLINE_UPSERT_CHUNK) {
       await this.klineRepo
         .createQueryBuilder()
         .insert()
         .into(DailyKline)
-        .values(rows.slice(i, i + KLINES_UPSERT_CHUNK))
+        .values(rows.slice(i, i + STOCK_KLINE_UPSERT_CHUNK))
         // 冲突时只更新行情列；无变化则不写入（skipUpdateIfNoValuesChanged）
         .orUpdate(['open', 'high', 'low', 'close', 'volume', 'amount'], ['code', 'trade_date'], {
           skipUpdateIfNoValuesChanged: true,
@@ -437,9 +436,9 @@ export class KlinesService {
   }
 
   /** 按 `(code, tradeDate)` 去重，保留先出现的一条 */
-  private dedupe(rows: KlineInsertRow[]): KlineInsertRow[] {
+  private dedupe(rows: StockKlineInsertRow[]): StockKlineInsertRow[] {
     const seen = new Set<string>()
-    const unique: KlineInsertRow[] = []
+    const unique: StockKlineInsertRow[] = []
 
     for (const row of rows) {
       const key = `${row.code}|${row.tradeDate}`

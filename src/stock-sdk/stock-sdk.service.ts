@@ -15,7 +15,7 @@ export interface CodeListOptions {
  * stock-sdk 服务
  *
  * 通过 `stock-sdk`（npm 包，零依赖）请求东方财富/腾讯等公开数据源获取证券代码列表。
- * **纯透传、不落库**——与 `SymbolsService`（定时同步入库的那套）是两条独立的取数路径，
+ * **纯透传、不落库**——与 `StockSymbolsService`（定时同步入库的那套）是两条独立的取数路径，
  * 可用作交叉对照。
  *
  * 与 TdxModule 的区别：本模块走 HTTP，而 TDX 是通达信 TCP 长连接协议。

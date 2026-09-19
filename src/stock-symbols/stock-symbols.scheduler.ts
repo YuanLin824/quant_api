@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { Cron } from '@nestjs/schedule'
-import { SYMBOLS_SYNC_CRON, SYMBOLS_SYNC_JOB_NAME, SYMBOLS_TIMEZONE } from './symbols.constants'
-import { SymbolsService } from './symbols.service'
+import {
+  STOCK_SYMBOLS_SYNC_CRON,
+  STOCK_SYMBOLS_SYNC_JOB_NAME,
+  STOCK_SYMBOLS_TIMEZONE,
+} from './stock-symbols.constants'
+import { StockSymbolsService } from './stock-symbols.service'
 
 /**
  * 标的代码同步调度器
@@ -17,14 +21,14 @@ import { SymbolsService } from './symbols.service'
  *    会在 `getResponse()` 处二次报错，把真实错误盖掉
  */
 @Injectable()
-export class SymbolsScheduler {
-  private readonly logger = new Logger(SymbolsScheduler.name)
+export class StockSymbolsScheduler {
+  private readonly logger = new Logger(StockSymbolsScheduler.name)
 
-  constructor(private readonly symbolsService: SymbolsService) {}
+  constructor(private readonly symbolsService: StockSymbolsService) {}
 
-  @Cron(SYMBOLS_SYNC_CRON, {
-    name: SYMBOLS_SYNC_JOB_NAME,
-    timeZone: SYMBOLS_TIMEZONE,
+  @Cron(STOCK_SYMBOLS_SYNC_CRON, {
+    name: STOCK_SYMBOLS_SYNC_JOB_NAME,
+    timeZone: STOCK_SYMBOLS_TIMEZONE,
     // 上次未跑完则跳过本次，避免同进程内重入
     waitForCompletion: true,
   })

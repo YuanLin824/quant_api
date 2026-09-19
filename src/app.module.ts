@@ -14,9 +14,9 @@ import { GLOBAL_CONFIG } from './config/global.config'
 import { PostgresModule } from './database/postgres.module'
 import { RedisModule } from './database/redis.module'
 import { RedisService } from './database/redis.service'
-import { KlinesModule } from './klines/klines.module'
+import { StockKlineModule } from './stock-kline/stock-kline.module'
 import { StockSdkModule } from './stock-sdk/stock-sdk.module'
-import { SymbolsModule } from './symbols/symbols.module'
+import { StockSymbolsModule } from './stock-symbols/stock-symbols.module'
 import { TdxModule } from './tdx/tdx.module'
 import { WestockCliModule } from './westock-cli/westock-cli.module'
 import { WestockDataModule } from './westock-data/westock-data.module'
@@ -60,8 +60,8 @@ import { WestockDataModule } from './westock-data/westock-data.module'
     TdxModule,
     WestockCliModule,
     WestockDataModule,
-    SymbolsModule,
-    KlinesModule,
+    StockSymbolsModule,
+    StockKlineModule,
     StockSdkModule,
   ],
 

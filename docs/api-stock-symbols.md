@@ -1,4 +1,4 @@
-# 标的代码（Symbols）
+# 标的代码（StockSymbols）
 
 [← 返回目录](../API.md)
 
@@ -61,7 +61,7 @@ A 股的交易所前缀**编码在代码里**（上游把 A 股视作一个整�
 **请求**
 
 ```
-POST /api/symbols/sync
+POST /api/stock-symbols/sync
 Authorization: Bearer <access_token>
 ```
 
@@ -107,7 +107,7 @@ Authorization: Bearer <access_token>
 **请求**
 
 ```
-GET /api/symbols
+GET /api/stock-symbols
 Authorization: Bearer <access_token>
 ```
 
@@ -128,7 +128,7 @@ Authorization: Bearer <access_token>
 | `cn` / `hk` / `us` / `fund` | 各市场的代码数量；某市场同步失败时键可能缺失 |
 
 > **本接口只返回数量，不返回具体代码列表。**
-> 具体代码的获取能力（`SymbolsService.getByMarket`）保留在 service 层，
+> 具体代码的获取能力（`StockSymbolsService.getByMarket`）保留在 service 层，
 > 供其他模块按需注入使用；也可直接查 `stock_symbols` 表。
 
 **错误响应**

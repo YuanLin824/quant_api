@@ -1,4 +1,4 @@
-# K 线（Klines）
+# K 线（StockKline）
 
 [← 返回目录](../API.md)
 
@@ -10,10 +10,10 @@
 
 本模块有**两条互不依赖的取数路径，且用的是两个不同的数据源**：
 
-| 路径     | 接口                                             | 数据源                      | 说明                                           |
-| -------- | ------------------------------------------------ | --------------------------- | ---------------------------------------------- |
-| **落库** | `POST /api/klines/sync`、`GET /api/klines/stats` | TDX → PostgreSQL            | 每日 16:00 同步全市场**日线**入库              |
-| **实时** | `GET /api/klines`                                | westock CLI（腾讯，子进程） | 单只即时拉取，**不读数据库、不写库**，周期任选 |
+| 路径     | 接口                                                       | 数据源                      | 说明                                           |
+| -------- | ---------------------------------------------------------- | --------------------------- | ---------------------------------------------- |
+| **落库** | `POST /api/stock-kline/sync`、`GET /api/stock-kline/stats` | TDX → PostgreSQL            | 每日 16:00 同步全市场**日线**入库              |
+| **实时** | `GET /api/stock-kline`                                     | westock CLI（腾讯，子进程） | 单只即时拉取，**不读数据库、不写库**，周期任选 |
 
 > 实时查询**不受**每日同步的时效限制，周期也可任选（落库只有日线）。
 > 需要已落库的稳定快照请走落库路径（由 `sync` 写入，目前没有对外暴露的读接口）。
@@ -63,14 +63,14 @@ A 股全市场日线（沪深北，代码取自 `stock_symbols` 表），**首�
 > 因此全市场约 5400 只需 **约 90 分钟**（不加间隔时约 2 分钟）。每日盘后的增量任务
 > 同样要遍历全市场，故每次都会跑满这个时长（16:00 启动，约 17:30 结束）。
 
-> **前置依赖**：股票代码来自 `stock_symbols` 表，需先执行过 `POST /api/symbols/sync`（每日 08:00 自动跑）。
+> **前置依赖**：股票代码来自 `stock_symbols` 表，需先执行过 `POST /api/stock-symbols/sync`（每日 08:00 自动跑）。
 
 ## 手动触发同步
 
 **请求**
 
 ```
-POST /api/klines/sync
+POST /api/stock-kline/sync
 Authorization: Bearer <access_token>
 Content-Type: application/json
 
@@ -124,14 +124,14 @@ Content-Type: application/json
 - `401` - `访问令牌无效或已过期`（由守卫抛出）
 - `409` - `同步任务正在执行中，请稍后再试`（上一次未结束）
 - `429` - 触发全局限流（每 60 秒 60 次）
-- `503` - `标的代码表为空，请先执行 POST /api/symbols/sync 同步 A 股代码`
+- `503` - `标的代码表为空，请先执行 POST /api/stock-symbols/sync 同步 A 股代码`
 
 ## 查询概览统计
 
 **请求**
 
 ```
-GET /api/klines/stats
+GET /api/stock-kline/stats
 Authorization: Bearer <access_token>
 ```
 
@@ -142,21 +142,34 @@ Authorization: Bearer <access_token>
   "code": 200,
   "message": "获取成功",
   "data": {
-    "symbols": 5390,
-    "rows": 2638120,
-    "earliest": "2024-09-19",
-    "latest": "2026-09-18"
+    "symbols": 5564,
+    "rows": 2628061,
+    "earliest": "2024-09-18T16:00:00.000Z",
+    "latest": "2026-09-17T16:00:00.000Z"
   }
 }
 ```
 
 **字段说明**
 
-| 字段                  | 说明           |
-| --------------------- | -------------- |
-| `symbols`             | 覆盖的股票数   |
-| `rows`                | 总行数         |
-| `earliest` / `latest` | 数据的日期范围 |
+| 字段                  | 说明                               |
+| --------------------- | ---------------------------------- |
+| `symbols`             | 覆盖的股票数                       |
+| `rows`                | 总行数                             |
+| `earliest` / `latest` | 数据的日期范围，见下方**时区说明** |
+
+> ⚠️ **`earliest` / `latest` 是 UTC 的 ISO 时间串，不是纯日期**。
+> `trade_date` 是 `date` 列，经聚合函数返回时被驱动解析为 `Date` 对象，序列化即 UTC——
+> 上面两个值对应的实际交易日是 **2024-09-19** 与 **2026-09-18**（`Z` 时刻 +8 小时）。
+>
+> 取真实交易日请按东八区渲染，或直接把时刻 +8h 再截日期：
+>
+> ```js
+> new Date('2024-09-18T16:00:00.000Z').toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' })
+> // → '2024-09-19'
+> ```
+>
+> 这两个字段仅用于**概览**，逐日数据请走实时查询接口（其 `time` 字段是 `YYYY-MM-DD` 形态的字符串）。
 
 ## 实时查询某只股票的 K 线
 
@@ -166,7 +179,7 @@ Authorization: Bearer <access_token>
 **请求**
 
 ```
-GET /api/klines?code=sh600036&period=m60&fq=nofq&start=2026-09-15&end=2026-09-18&limit=100
+GET /api/stock-kline?code=sh600036&period=m60&fq=nofq&start=2026-09-15&end=2026-09-18&limit=100
 Authorization: Bearer <access_token>
 ```
 
@@ -203,7 +216,7 @@ Authorization: Bearer <access_token>
 
 ```
 # 取 2020 年上半年的最后 3 根，而不是 2020-01-01 之后的头 3 根
-GET /api/klines?code=sh600036&start=2020-01-01&end=2020-06-30&limit=3
+GET /api/stock-kline?code=sh600036&start=2020-01-01&end=2020-06-30&limit=3
 → 2020-06-30 / 2020-06-29 / 2020-06-24
 ```
 
@@ -236,6 +249,7 @@ GET /api/klines?code=sh600036&start=2020-01-01&end=2020-06-30&limit=3
 - **实际返回条数由上游数据深度决定，可能远小于 `limit`**（见上表）。
 - ⚠️ **`year` 传大 `limit` 会触发上游报错**：实测 `limit=1000` 时上游返回
   `[code=1620053001] service error`，接口表现为 `503`；`limit=100` 及以下正常。
+  这是**已知取舍**：不对 `year` 单独压上限，`limit` 已有 1–1000 的全局上界，调用方按需调小即可。
 - **分钟级的时间精确到分**：CLI 输出带秒（`2026-09-18 15:00:00`），接口统一截到 `HH:mm`。
   若也只取到日，同一天的 241 根 1 分钟线会得到**完全相同**的标识。
 - **周/月/季/年线的时间是周期内最后一个交易日**，不是自然周/月初。

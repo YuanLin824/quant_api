@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { StockSymbol } from '../symbols/entities/stock-symbol.entity'
+import { StockSymbol } from '../stock-symbols/entities/stock-symbol.entity'
 import { TdxModule } from '../tdx/tdx.module'
 import { WestockCliModule } from '../westock-cli/westock-cli.module'
 import { DailyKline } from './entities/daily-kline.entity'
-import { KlinesController } from './klines.controller'
-import { KlinesScheduler } from './klines.scheduler'
-import { KlinesService } from './klines.service'
+import { StockKlineController } from './stock-kline.controller'
+import { StockKlineScheduler } from './stock-kline.scheduler'
+import { StockKlineService } from './stock-kline.service'
 
 /**
  * K 线模块
@@ -20,7 +20,7 @@ import { KlinesService } from './klines.service'
  */
 @Module({
   imports: [TypeOrmModule.forFeature([DailyKline, StockSymbol]), TdxModule, WestockCliModule],
-  controllers: [KlinesController],
-  providers: [KlinesService, KlinesScheduler],
+  controllers: [StockKlineController],
+  providers: [StockKlineService, StockKlineScheduler],
 })
-export class KlinesModule {}
+export class StockKlineModule {}

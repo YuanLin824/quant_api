@@ -67,28 +67,28 @@ POST {{baseUrl}}/auth/logout-all
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
-### ========== 标的代码（Symbols）==========
+### ========== 标的代码（StockSymbols）==========
 # 每天 08:00（Asia/Shanghai）自动同步；以下为手动触发与查询
 
 
-### Symbols - 手动触发全量同步（首次初始化 / 失败补跑；耗时约 10~15 秒）
-POST {{baseUrl}}/symbols/sync
+### StockSymbols - 手动触发全量同步（首次初始化 / 失败补跑；耗时约 10~15 秒）
+POST {{baseUrl}}/stock-symbols/sync
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
-### Symbols - 各市场代码数量统计（只返回数量，不返回具体代码）
-GET {{baseUrl}}/symbols
+### StockSymbols - 各市场代码数量统计（只返回数量，不返回具体代码）
+GET {{baseUrl}}/stock-symbols
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
-### ========== K 线（Klines）==========
+### ========== K 线（StockKline）==========
 # 每天 16:00（Asia/Shanghai）盘后自动同步（落库走 TDX）；以下为手动触发与查询
 # 注意单位：价格/成交额为「元」，成交量为「手」
 # 下面的「实时查询」组走 westock CLI、不读库，参数与「同步」组无关
 
 
-### Klines - 全量回补近两年（首次执行；遍历全市场串行 + 每只间隔 1 秒，耗时约 90 分钟）
-POST {{baseUrl}}/klines/sync
+### StockKline - 全量回补近两年（首次执行；遍历全市场串行 + 每只间隔 1 秒，耗时约 90 分钟）
+POST {{baseUrl}}/stock-kline/sync
 Content-Type: application/json
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
@@ -97,8 +97,8 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 }
 
 
-### Klines - 增量补最新几根（不传 mode 时按表是否为空自动判定）
-POST {{baseUrl}}/klines/sync
+### StockKline - 增量补最新几根（不传 mode 时按表是否为空自动判定）
+POST {{baseUrl}}/stock-kline/sync
 Content-Type: application/json
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
@@ -107,31 +107,31 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 }
 
 
-### Klines - 概览统计（覆盖股票数、总行数、日期范围）
-GET {{baseUrl}}/klines/stats
+### StockKline - 概览统计（覆盖股票数、总行数、日期范围）
+GET {{baseUrl}}/stock-kline/stats
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
-### Klines - 实时查询日 K 线（走 westock CLI、不读库；不传 period 默认 day，limit 上限 1000）
-GET {{baseUrl}}/klines?code=sh600036&limit=100
+### StockKline - 实时查询日 K 线（走 westock CLI、不读库；不传 period 默认 day，limit 上限 1000）
+GET {{baseUrl}}/stock-kline?code=sh600036&limit=100
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
-### Klines - 实时查询 60 分钟线（period 取 m1/m5/m15/m30/m60/m120/day/week/month/season/year）
-GET {{baseUrl}}/klines?code=sh600036&period=m60&limit=100
+### StockKline - 实时查询 60 分钟线（period 取 m1/m5/m15/m30/m60/m120/day/week/month/season/year）
+GET {{baseUrl}}/stock-kline?code=sh600036&period=m60&limit=100
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
-### Klines - 实时查询 1 分钟线（分钟级不传日期只回最近一个交易日，time 精确到分）
-GET {{baseUrl}}/klines?code=sh600036&period=m1&limit=241
+### StockKline - 实时查询 1 分钟线（分钟级不传日期只回最近一个交易日，time 精确到分）
+GET {{baseUrl}}/stock-kline?code=sh600036&period=m1&limit=241
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
-### Klines - 指定区间（limit 取区间尾部；分钟周期需 start+end 同给且跨度 ≤5 天）
-GET {{baseUrl}}/klines?code=sh600036&start=2020-01-01&end=2020-06-30&limit=3
+### StockKline - 指定区间（limit 取区间尾部；分钟周期需 start+end 同给且跨度 ≤5 天）
+GET {{baseUrl}}/stock-kline?code=sh600036&start=2020-01-01&end=2020-06-30&limit=3
 Authorization: Bearer {{login.response.body.data.accessToken}}
 
 
-### Klines - 不复权（fq 取 qfq/hfq/bfq/nofq；不传为上游默认的前复权，bfq 对 A 股会 503）
-GET {{baseUrl}}/klines?code=sh600036&fq=nofq&start=2020-06-30&end=2020-06-30&limit=1
+### StockKline - 不复权（fq 取 qfq/hfq/bfq/nofq；不传为上游默认的前复权，bfq 对 A 股会 503）
+GET {{baseUrl}}/stock-kline?code=sh600036&fq=nofq&start=2020-06-30&end=2020-06-30&limit=1
 Authorization: Bearer {{login.response.body.data.accessToken}}

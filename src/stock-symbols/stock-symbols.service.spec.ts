@@ -2,10 +2,10 @@ import { ConflictException } from '@nestjs/common'
 import type { Repository } from 'typeorm'
 import type { StockSdkService } from '../stock-sdk/stock-sdk.service'
 import type { StockSymbol } from './entities/stock-symbol.entity'
-import { SymbolsService } from './symbols.service'
+import { StockSymbolsService } from './stock-symbols.service'
 
-describe('SymbolsService', () => {
-  let service: SymbolsService
+describe('StockSymbolsService', () => {
+  let service: StockSymbolsService
   let sdk: { getCodeList: jest.Mock }
   let qb: Record<string, jest.Mock>
   let repo: { count: jest.Mock; find: jest.Mock; createQueryBuilder: jest.Mock }
@@ -30,7 +30,7 @@ describe('SymbolsService', () => {
       createQueryBuilder: jest.fn(() => qb),
     }
 
-    service = new SymbolsService(
+    service = new StockSymbolsService(
       sdk as unknown as StockSdkService,
       repo as unknown as Repository<StockSymbol>
     )

@@ -3,11 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { StockSdkService } from '../stock-sdk/stock-sdk.service'
 import { StockSymbol } from './entities/stock-symbol.entity'
-import { SYMBOL_MARKETS, SYMBOLS_UPSERT_CHUNK, type SymbolMarket } from './symbols.constants'
+import {
+  STOCK_SYMBOLS_UPSERT_CHUNK,
+  SYMBOL_MARKETS,
+  type StockSymbolMarket,
+} from './stock-symbols.constants'
 
 /** 单个市场的同步结果 */
 export interface MarketSyncResult {
-  market: SymbolMarket
+  market: StockSymbolMarket
   /** 上游返回条数（去重前） */
   fetched: number
   /** 去重后待入库条数 */
@@ -33,8 +37,8 @@ export interface SymbolSyncSummary {
  * 上游返回的是**纯代码数组**（不含名称等属性），故本表只有 `market` 与 `code` 两列。
  */
 @Injectable()
-export class SymbolsService {
-  private readonly logger = new Logger(SymbolsService.name)
+export class StockSymbolsService {
+  private readonly logger = new Logger(StockSymbolsService.name)
 
   /** 同步中标志：挡住「手动接口连点」与「cron 与手动撞车」 */
   private running = false
@@ -77,7 +81,7 @@ export class SymbolsService {
   }
 
   /** 同步单个市场 */
-  private async syncMarket(market: SymbolMarket): Promise<MarketSyncResult> {
+  private async syncMarket(market: StockSymbolMarket): Promise<MarketSyncResult> {
     try {
       // 不传 simple → 上游返回带市场前缀的代码（sh600036 / hk00700 / usAAPL）
       const codes = await this.stockSdkService.getCodeList({ market })
@@ -90,7 +94,7 @@ export class SymbolsService {
   }
 
   /** 去重 → 分批 upsert → 汇总统计 */
-  private async persist(market: SymbolMarket, codes: string[]): Promise<MarketSyncResult> {
+  private async persist(market: StockSymbolMarket, codes: string[]): Promise<MarketSyncResult> {
     // 代码格式（hk/us 前缀）已由 StockSdkService 规范化，这里只做入库前的兜底去重
     const { unique, duplicates } = this.dedupe(codes)
     if (duplicates.length > 0) {
@@ -146,13 +150,13 @@ export class SymbolsService {
    * 返回值取写入前后的 count 差值，即**新增数**——更新不改变总数，
    * 故无法由此得出更新条数。
    */
-  private async upsert(market: SymbolMarket, codes: string[]): Promise<number> {
+  private async upsert(market: StockSymbolMarket, codes: string[]): Promise<number> {
     if (codes.length === 0) return 0
 
     const before = await this.symbolRepo.count({ where: { market } })
 
-    for (let i = 0; i < codes.length; i += SYMBOLS_UPSERT_CHUNK) {
-      const rows = codes.slice(i, i + SYMBOLS_UPSERT_CHUNK).map((code) => ({ market, code }))
+    for (let i = 0; i < codes.length; i += STOCK_SYMBOLS_UPSERT_CHUNK) {
+      const rows = codes.slice(i, i + STOCK_SYMBOLS_UPSERT_CHUNK).map((code) => ({ market, code }))
       await this.symbolRepo
         .createQueryBuilder()
         .insert()
@@ -169,7 +173,7 @@ export class SymbolsService {
   }
 
   /** 按市场查询代码列表（升序） */
-  async getByMarket(market: SymbolMarket): Promise<string[]> {
+  async getByMarket(market: StockSymbolMarket): Promise<string[]> {
     const rows = await this.symbolRepo.find({ where: { market }, order: { code: 'ASC' } })
     return rows.map((row) => row.code)
   }

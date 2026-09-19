@@ -8,8 +8,8 @@
 - [系统配置](./docs/api-config.md)
 - [健康检查](./docs/api-health.md)
 - [认证接口](./docs/api-auth.md)
-- [标的代码（Symbols）](./docs/api-symbols.md)
-- [K 线（Klines）](./docs/api-klines.md)
+- [标的代码（StockSymbols）](./docs/api-stock-symbols.md)
+- [K 线（StockKline）](./docs/api-stock-kline.md)
 
 ## 基础信息
 
@@ -20,12 +20,12 @@
 
 ## 认证与限流
 
-| 接口分组 | 路径前缀       | 认证要求                                       | 限流                 |
-| -------- | -------------- | ---------------------------------------------- | -------------------- |
-| 健康检查 | `/api/health`  | 否                                             | 全局 60 秒 60 次     |
-| 认证接口 | `/api/auth`    | 各接口不同，详见[认证接口](./docs/api-auth.md) | 各接口不同，见该文档 |
-| 标的代码 | `/api/symbols` | 是（access token）                             | 全局 60 秒 60 次     |
-| K 线     | `/api/klines`  | 是（access token）                             | 全局 60 秒 60 次     |
+| 接口分组 | 路径前缀             | 认证要求                                       | 限流                 |
+| -------- | -------------------- | ---------------------------------------------- | -------------------- |
+| 健康检查 | `/api/health`        | 否                                             | 全局 60 秒 60 次     |
+| 认证接口 | `/api/auth`          | 各接口不同，详见[认证接口](./docs/api-auth.md) | 各接口不同，见该文档 |
+| 标的代码 | `/api/stock-symbols` | 是（access token）                             | 全局 60 秒 60 次     |
+| K 线     | `/api/stock-kline`   | 是（access token）                             | 全局 60 秒 60 次     |
 
 受保护接口统一通过请求头携带令牌（唯一例外是 `POST /api/auth/refresh`，它携带的是 refresh token）：
 

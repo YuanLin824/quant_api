@@ -1,15 +1,15 @@
 import { ConflictException, ServiceUnavailableException } from '@nestjs/common'
 import type { Repository } from 'typeorm'
-import type { StockSymbol } from '../symbols/entities/stock-symbol.entity'
+import type { StockSymbol } from '../stock-symbols/entities/stock-symbol.entity'
 import type { TdxService } from '../tdx/tdx.service'
 import type { WestockCliService } from '../westock-cli/westock-cli.service'
 import type { DailyKline } from './entities/daily-kline.entity'
-import { KlinesService } from './klines.service'
+import { StockKlineService } from './stock-kline.service'
 
 // 把串行间隔置 0：否则每个用例都要真等「1 秒 × 股票数」，测试会慢到不可用
-jest.mock('./klines.constants', () => ({
-  ...jest.requireActual('./klines.constants'),
-  KLINES_REQUEST_INTERVAL_MS: 0,
+jest.mock('./stock-kline.constants', () => ({
+  ...jest.requireActual('./stock-kline.constants'),
+  STOCK_KLINE_REQUEST_INTERVAL_MS: 0,
 }))
 
 /** 距今 offset 天的日期 */
@@ -66,8 +66,8 @@ function cliRow(date: string) {
   }
 }
 
-describe('KlinesService', () => {
-  let service: KlinesService
+describe('StockKlineService', () => {
+  let service: StockKlineService
   let tdx: { getKline: jest.Mock }
   let westock: { kline: jest.Mock }
   let symbolRepo: { find: jest.Mock }
@@ -103,7 +103,7 @@ describe('KlinesService', () => {
       createQueryBuilder: jest.fn(() => qb),
     }
 
-    service = new KlinesService(
+    service = new StockKlineService(
       tdx as unknown as TdxService,
       westock as unknown as WestockCliService,
       repo as unknown as Repository<DailyKline>,
@@ -429,7 +429,7 @@ describe('KlinesService', () => {
 
       const promise = service.sync('full')
       await expect(promise).rejects.toBeInstanceOf(ServiceUnavailableException)
-      await expect(promise).rejects.toThrow('请先执行 POST /api/symbols/sync')
+      await expect(promise).rejects.toThrow('请先执行 POST /api/stock-symbols/sync')
     })
 
     it('同步执行中再次调用抛 409', async () => {

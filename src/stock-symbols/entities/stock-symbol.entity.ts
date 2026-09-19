@@ -1,5 +1,5 @@
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm'
-import type { SymbolMarket } from '../symbols.constants'
+import type { StockSymbolMarket } from '../stock-symbols.constants'
 
 /**
  * 市场标的代码
@@ -34,5 +34,5 @@ export class StockSymbol {
   code!: string
 
   @Column({ name: 'market', type: 'varchar', length: 4, comment: '市场: cn/hk/us/fund' })
-  market!: SymbolMarket
+  market!: StockSymbolMarket
 }
