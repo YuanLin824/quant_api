@@ -5,14 +5,20 @@ import {
   KLINE_DEFAULT_LIMIT,
   KLINE_DEFAULT_PERIOD,
   KLINE_MINUTE_MAX_SPAN_DAYS,
+  SEARCH_DEFAULT_LIMIT,
   type KlinePeriod,
 } from './westock-cli.constants'
-import type { KlineOptions, WestockKlineResult } from './westock-cli.types'
+import type {
+  KlineOptions,
+  SearchOptions,
+  WestockCliSearchResult,
+  WestockKlineResult,
+} from './westock-cli.types'
 
 /**
- * 腾讯 Go CLI 服务（K 线）
+ * 腾讯 Go CLI 服务（K 线与统一搜索）
  *
- * 通过子进程调用 `src/scripts/westock.exe` 获取 K 线数据。之所以不复用
+ * 通过子进程调用 `src/scripts/westock.exe` 获取数据。之所以不复用
  * `WestockDataService`（clawhub）的 kline：后者不支持分钟周期，
  * 传 `m1`/`5m` 等会静默回退到日线。
  */
@@ -55,6 +61,49 @@ export class WestockCliService extends CliRunnerBase {
       columns: parsed.status === 'ok' ? parsed.columns : [],
       rows: parsed.status === 'ok' ? parsed.rows : [],
       total: parsed.status === 'ok' ? parsed.rows.length : 0,
+    }
+  }
+
+  /**
+   * 统一搜索：不传类型时 CLI **默认仅搜股票**（排除 ETF/可转债）
+   *
+   * 多类型时 CLI **按类型分段**返回，故结果是 `sections` 而非扁平行——
+   * 必须用 `parseSectionsOrThrow`，`parseOrThrow` 只认单张表格，
+   * 会把第二段的表头当成数据行混进结果。
+   */
+  async search(keyword: string, options: SearchOptions = {}): Promise<WestockCliSearchResult> {
+    const trimmed = keyword.trim()
+    // 前置校验以便返回 400 而非 503：CLI 对空关键词只报 `错误: 请提供搜索关键词`，
+    // 那种输出解析不出表格，会被当成「上游异常」
+    if (trimmed === '') {
+      throw new BadRequestException('搜索关键词不能为空')
+    }
+
+    const limit = options.limit ?? SEARCH_DEFAULT_LIMIT
+    const offset = options.offset ?? 0
+
+    const args = ['search', trimmed, '--limit', String(limit)]
+    if (options.types?.length) args.push('--type', options.types.join(','))
+    if (options.market) args.push('--market', options.market)
+    // offset 为 0 时不必显式传（与 CLI 默认一致）
+    if (offset > 0) args.push('--offset', String(offset))
+
+    const parsed = this.parseSectionsOrThrow(
+      await this.runGoCli(args),
+      `search keyword=${trimmed} type=${options.types?.join(',') ?? '默认(仅股票)'} market=${options.market ?? '-'} limit=${limit} offset=${offset}`
+    )
+
+    const sections = parsed.status === 'ok' ? parsed.sections : []
+
+    return {
+      keyword: trimmed,
+      types: options.types,
+      market: options.market,
+      limit,
+      offset,
+      sections,
+      // 各段行数之和；上游命中总数在每段的 `total` 里（分页时两者不同）
+      total: sections.reduce((sum, section) => sum + section.rows.length, 0),
     }
   }
 

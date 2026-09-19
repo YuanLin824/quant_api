@@ -7,7 +7,8 @@ import {
 } from '@nestjs/common'
 import { execFile, type ChildProcess, type ExecFileException } from 'node:child_process'
 import { CLI_MAX_BUFFER, CLI_SETUP_HINT, CLI_TIMEOUT_MS, LOG_SNIPPET_LENGTH } from './cli.constants'
-import type { TableParseResult } from './cli.types'
+import type { SectionParseResult, TableParseResult } from './cli.types'
+import { parseSectionedOutput } from './section-parser'
 import { parseTableOutput } from './table-parser'
 
 /**
@@ -36,16 +37,30 @@ export abstract class CliRunnerBase implements OnModuleDestroy {
     this.running.clear()
   }
 
-  /** 解析输出；无法解析即视为上游异常（无结果不在此列） */
+  /** 解析**扁平**表格输出；无法解析即视为上游异常（无结果不在此列） */
   protected parseOrThrow(stdout: string, context: string): TableParseResult {
     const parsed = parseTableOutput(stdout)
-
-    if (parsed.status === 'invalid') {
-      this.logger.error(`CLI 输出无法解析: ${context} stdout=${truncate(stdout)}`)
-      throw new ServiceUnavailableException('证券数据服务返回异常，请稍后重试')
-    }
-
+    this.assertParseable(parsed.status, stdout, context)
     return parsed
+  }
+
+  /** 解析**分段**表格输出（如 Go CLI 的 `search`）；无法解析同样视为上游异常 */
+  protected parseSectionsOrThrow(stdout: string, context: string): SectionParseResult {
+    const parsed = parseSectionedOutput(stdout)
+    this.assertParseable(parsed.status, stdout, context)
+    return parsed
+  }
+
+  /** 两种解析结果的公共收口：`invalid` 一律转 503 并记日志 */
+  private assertParseable(
+    status: 'ok' | 'empty' | 'invalid',
+    stdout: string,
+    context: string
+  ): void {
+    if (status !== 'invalid') return
+
+    this.logger.error(`CLI 输出无法解析: ${context} stdout=${truncate(stdout)}`)
+    throw new ServiceUnavailableException('证券数据服务返回异常，请稍后重试')
   }
 
   /** 执行子进程并返回 stdout；失败按类型转为 HTTP 异常 */

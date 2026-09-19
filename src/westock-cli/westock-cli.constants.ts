@@ -86,6 +86,35 @@ export const KLINE_COLUMN_MAP = {
 export const KLINE_MINUTE_MAX_SPAN_DAYS = 5
 
 /**
+ * `search` 的类型（CLI 的 `--type`，**可逗号分隔多值**）
+ *
+ * 不传时 CLI **默认仅搜股票**（排除 ETF/可转债）。多类型时输出会**按类型分段**，
+ * 故解析要用 `section-parser` 而非扁平解析器。
+ */
+export const SEARCH_TYPES = ['stock', 'etf', 'bond', 'sector', 'index', 'futures', 'forex'] as const
+export type SearchType = (typeof SEARCH_TYPES)[number]
+
+/**
+ * `search` 的市场（CLI 的 `--market`）
+ *
+ * ⚠️ `jp`/`kr` 是**日韩股专用接口**，与 `--type` **互斥**（CLI 限制），
+ * 组合使用会报错——这一条由 DTO 与 service 各自把关。
+ */
+export const SEARCH_MARKETS = ['hs', 'bj', 'hk', 'us', 'jp', 'kr'] as const
+export type SearchMarket = (typeof SEARCH_MARKETS)[number]
+
+/** 搜索返回条数：CLI 不传时默认 10（实测） */
+export const SEARCH_DEFAULT_LIMIT = 10
+
+/**
+ * 单次搜索的条数上限
+ *
+ * CLI 自身**未声明**上限（实测 `--limit 1000` 可全量返回），此值是本模块为控制
+ * 响应体量、降低触发上游限流的概率而自设的——与 `KLINE_MAX_LIMIT` 同一考量。
+ */
+export const SEARCH_MAX_LIMIT = 100
+
+/**
  * Go CLI 二进制路径
  *
  * Windows 为 `westock.exe`，Unix 无扩展名。两者都由 `src/scripts/setup.*` 下载，

@@ -103,6 +103,7 @@ npm run setup:westock
 - `docs/api-config.md` — 系统配置（认证机制、环境变量、开发环境）
 - `docs/api-stock-symbols.md` — 标的代码（stock-sdk 数据源，每日定时同步落库、手动触发、数量统计）
 - `docs/api-stock-kline.md` — K 线（盘后同步、单位换算、多周期实时查询）
+- `docs/api-stock-search.md` — 证券搜索（关键词检索、类型/市场/分页、分段响应）
 - `db/001-stock-symbols.sql` — 标的代码表的生产建表 DDL（生产手工执行一次）
 - `db/002-daily-klines.sql` — 日 K 线表的生产建表 DDL（生产手工执行一次）
 

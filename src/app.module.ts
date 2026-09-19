@@ -16,6 +16,7 @@ import { RedisModule } from './database/redis.module'
 import { RedisService } from './database/redis.service'
 import { StockKlineModule } from './stock-kline/stock-kline.module'
 import { StockSdkModule } from './stock-sdk/stock-sdk.module'
+import { StockSearchModule } from './stock-search/stock-search.module'
 import { StockSymbolsModule } from './stock-symbols/stock-symbols.module'
 import { TdxModule } from './tdx/tdx.module'
 import { WestockCliModule } from './westock-cli/westock-cli.module'
@@ -62,6 +63,7 @@ import { WestockDataModule } from './westock-data/westock-data.module'
     WestockDataModule,
     StockSymbolsModule,
     StockKlineModule,
+    StockSearchModule,
     StockSdkModule,
   ],
 

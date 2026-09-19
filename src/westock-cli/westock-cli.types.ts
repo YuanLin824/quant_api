@@ -1,5 +1,5 @@
-import type { TableRow } from '../common/cli/cli.types'
-import type { KlineFq, KlinePeriod } from './westock-cli.constants'
+import type { TableRow, TableSection } from '../common/cli/cli.types'
+import type { KlineFq, KlinePeriod, SearchMarket, SearchType } from './westock-cli.constants'
 
 /** K 线查询的可选参数 */
 export interface KlineOptions {
@@ -34,5 +34,38 @@ export interface WestockKlineResult {
   /** 行数据 */
   rows: TableRow[]
   /** 返回行数 */
+  total: number
+}
+
+/** 搜索查询的可选参数 */
+export interface SearchOptions {
+  /** 类型；**多个时 CLI 按类型分段返回**，不传则仅搜股票 */
+  types?: SearchType[]
+  /** 市场；`jp`/`kr` 与 `types` **互斥**（CLI 限制） */
+  market?: SearchMarket
+  limit?: number
+  offset?: number
+}
+
+/** 搜索结果 */
+export interface WestockCliSearchResult {
+  /** 搜索关键词（已 trim，原样回显） */
+  keyword: string
+  /** 类型（未指定时由 CLI 默认仅搜股票） */
+  types?: SearchType[]
+  /** 市场（未指定时不限） */
+  market?: SearchMarket
+  /** 实际请求的条数上限 */
+  limit: number
+  /** 偏移量 */
+  offset: number
+  /**
+   * 按类型分段的结果
+   *
+   * **全部无结果时是空数组**——某一类无结果不产生段，CLI 只打一行
+   * 「未找到匹配的结果（…）。」提示，该提示会被解析器丢弃。
+   */
+  sections: TableSection[]
+  /** 各段行数之和（**不等于**上游命中总数，见 `TableSection.total`） */
   total: number
 }

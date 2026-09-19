@@ -12,6 +12,7 @@
 - **StockSdkModule** (`src/stock-sdk/`) — 证券代码能力（`stock-sdk` npm 包，HTTP 公开数据源），纯透传、不落库。**内部服务，不对外暴露 HTTP 接口**
 - **StockSymbolsModule** (`src/stock-symbols/`) — 标的代码模块，每日定时同步全量股票代码（A股/港股/美股/基金）入库，并提供手动触发与查询接口
 - **StockKlineModule** (`src/stock-kline/`) — K 线模块。落库路径每日盘后经 TdxModule 同步 A 股全市场**日线**入库（首次回补近两年），并提供手动触发与概览统计；**实时查询**路径经 WestockCliModule 拉取、不读库、周期任选
+- **StockSearchModule** (`src/stock-search/`) — 证券搜索模块，经 WestockCliModule 按关键词实时检索（不落库），支持类型/市场/分页
 - **Common** (`src/common/`) — 跨模块共享件：`BaseEntity` 实体基类、全局异常过滤器、请求日志中间件、校验装饰器
   - `common/cli/` — 两个 westock CLI 服务（`westock-cli` / `westock-data`）的共用层：`CliRunnerBase`（子进程调用与错误分类）、`table-parser`（输出解析）、通用常量与类型
 - **Config** (`src/config/`) — 配置集中管理：`ENV_KEYS` 常量、`registerAs` 命名空间配置、Winston 日志器
@@ -94,6 +95,16 @@
     - **服务与模块分工**：`StockSdkService` 只负责**实时获取**（纯透传、不落库、不暴露接口）；`StockSymbolsModule` 在此之上做定时**落库**（A股/港股/美股/基金四个市场，持久化、可离线查询、可被其他模块直接查表复用）
     - **透传接口不落库**：无表结构、无定时任务，数据实时获取
     - 该包是**双格式**（CJS + ESM），不像 `@nestjs/schedule` 那样只有纯 ESM，故 spec 里无需绕开加载问题
+
+13. **证券搜索**: `StockSearchService` 经 `WestockCliService.search()` 提供关键词检索（`src/stock-search/`），纯编排、不落库、不缓存。
+    - **响应按类型分段**，不是扁平行：CLI 一次可搜多个类型，输出是「每类一段」的表格（`sections`）。故新增了 `common/cli/section-parser.ts`——原有的 `table-parser` 只认**单张**扁平表格，会**把第二段的表头当成数据行**混进结果
+    - **段标题的计数不能按固定文案匹配**：绝大多数类型是 `共 N 条，显示前 M`，但 **`--market jp`/`kr` 只有 `显示 N 条`**（且该段的列是 `code`/`name`/`market` 而非 `type`）。故只校验 `**…** — …` 这个外形，计数再按 `共` / `显示` 分别提取
+    - **空结果文案有三种**（`未找到匹配的结果（…）。` / `未找到匹配的结果（股票·美股）。` / `未找到与"…"匹配的韩股。`），共同前缀是 `未找到`；且**某一类无结果不产生段**，故全空时 `sections` 是空数组。这些提示行被解析器丢弃，代价是调用方**无法区分**「该类搜过但无结果」与「没搜该类」
+    - **`total` 与 `rows.length` 可不同**：`total` 取标题里的「共 N 条」（上游命中数），带 `--offset` 时是 `共 7 条，显示前 2`；且 `total` 本身也受 `--limit` 约束
+    - **`jp`/`kr` 与 `--type` 的「互斥」是纸面的**：CLI 的 help 如此写，但实测组合时**不报错**（`--type` 被忽略），故不做互斥校验——按 help 写会拦掉可用的组合
+    - **关键词为空必须前置拦**：CLI 只报 `错误: 请提供搜索关键词`，该输出解析不出表格，会被当成「上游异常」→ 503。故 `WestockCliService.search` 先 trim、空则抛 400
+    - **分页靠 `offset`**：`limit` 会**同时约束上游命中数与返回行数**，故「取第 N 页」只能靠 `offset`
+    - **限流沿用全局**：每请求 fork 一个子进程，不豁免
 
 ## 日志
 

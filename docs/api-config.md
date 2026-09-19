@@ -144,4 +144,9 @@ curl "http://localhost:3001/api/stock-kline?code=sh600036&limit=10" \
 # 实时查询 60 分钟线、不复权
 curl "http://localhost:3001/api/stock-kline?code=sh600036&period=m60&fq=nofq&limit=10" \
   -H "Authorization: Bearer <access_token>"
+
+# 按关键词搜索证券（不落库；多类型时响应按类型分段，此处只搜股票）
+# 关键词用 UTF-8 百分号编码——非 UTF-8 终端直传中文会乱码，详见 docs/api-stock-search.md
+curl "http://localhost:3001/api/stock-search?keyword=%E8%85%BE%E8%AE%AF&type=stock&limit=10" \
+  -H "Authorization: Bearer <access_token>"
 ```

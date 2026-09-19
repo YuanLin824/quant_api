@@ -10,6 +10,7 @@
 - [认证接口](./docs/api-auth.md)
 - [标的代码（StockSymbols）](./docs/api-stock-symbols.md)
 - [K 线（StockKline）](./docs/api-stock-kline.md)
+- [证券搜索（StockSearch）](./docs/api-stock-search.md)
 
 ## 基础信息
 
@@ -26,6 +27,7 @@
 | 认证接口 | `/api/auth`          | 各接口不同，详见[认证接口](./docs/api-auth.md) | 各接口不同，见该文档 |
 | 标的代码 | `/api/stock-symbols` | 是（access token）                             | 全局 60 秒 60 次     |
 | K 线     | `/api/stock-kline`   | 是（access token）                             | 全局 60 秒 60 次     |
+| 证券搜索 | `/api/stock-search`  | 是（access token）                             | 全局 60 秒 60 次     |
 
 受保护接口统一通过请求头携带令牌（唯一例外是 `POST /api/auth/refresh`，它携带的是 refresh token）：
 

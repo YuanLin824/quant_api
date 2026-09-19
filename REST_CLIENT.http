@@ -135,3 +135,33 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 ### StockKline - 不复权（fq 取 qfq/hfq/bfq/nofq；不传为上游默认的前复权，bfq 对 A 股会 503）
 GET {{baseUrl}}/stock-kline?code=sh600036&fq=nofq&start=2020-06-30&end=2020-06-30&limit=1
 Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### ========== 证券搜索（StockSearch）==========
+# 走 westock CLI 子进程，不落库；每次请求 fork 一个进程
+# 不传 type 时仅搜股票；多类型时响应按类型分段（sections）
+
+
+### StockSearch - 默认（仅搜股票，limit 默认 10）
+GET {{baseUrl}}/stock-search?keyword=腾讯
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### StockSearch - 多类型（stock,etf,bond,sector,index,futures,forex；响应分多段）
+GET {{baseUrl}}/stock-search?keyword=兴业&type=stock,bond&limit=3
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### StockSearch - 限定市场（hs/bj/hk/us/jp/kr；限流同全局 60 秒 60 次）
+GET {{baseUrl}}/stock-search?keyword=腾讯&type=stock&market=hk&limit=10
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### StockSearch - 翻页（limit 同时约束命中数与行数，翻页靠 offset）
+GET {{baseUrl}}/stock-search?keyword=腾讯&type=stock&limit=2&offset=2
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### StockSearch - 日韩股（独立接口，段的列是 market 而非 type）
+GET {{baseUrl}}/stock-search?keyword=丰田&market=jp
+Authorization: Bearer {{login.response.body.data.accessToken}}

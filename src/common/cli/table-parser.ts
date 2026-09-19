@@ -10,8 +10,8 @@ import type { TableParseResult, TableRow } from './cli.types'
  * 失败与无结果的**退出码都是 0**，只能按内容判定。
  */
 
-/** 按未转义的竖线拆分表格行，返回去掉首尾空白后的单元格 */
-function splitTableRow(line: string): string[] {
+/** 按未转义的竖线拆分表格行，返回去掉首尾空白后的单元格（`section-parser` 共用） */
+export function splitTableRow(line: string): string[] {
   const parts = line.split(/(?<!\\)\|/)
 
   // 首尾竖线会产生空串；用判空而非固定 slice，以兼容不以 `|` 结尾的行
@@ -21,8 +21,8 @@ function splitTableRow(line: string): string[] {
   return parts.map((cell) => cell.trim().replace(/\\\|/g, '|'))
 }
 
-/** 是否为表格分隔行（如 `| --- | --- |`） */
-function isSeparatorRow(cells: string[]): boolean {
+/** 是否为表格分隔行（如 `| --- | --- |`）（`section-parser` 共用） */
+export function isSeparatorRow(cells: string[]): boolean {
   return cells.length > 0 && cells.every((cell) => /^:?-{2,}:?$/.test(cell))
 }
 
