@@ -43,9 +43,52 @@
 
 > 账号初始化脚本位于 `docker-compose/postgres.sh` 与 `docker-compose/redis.sh`。
 
+## 定时任务
+
+使用 `@nestjs/schedule`，在 `AppModule` 中注册 `ScheduleModule.forRoot()`
+（其探索器会全局扫描各模块的 `@Cron`，故子模块不必再 import）。
+
+| 任务名               | 时间                        | 说明                               |
+| -------------------- | --------------------------- | ---------------------------------- |
+| `stock-symbols-sync` | 每天 08:00（Asia/Shanghai） | 同步 A股/港股/美股全量股票代码入库 |
+| `daily-klines-sync`  | 每天 16:00（Asia/Shanghai） | 盘后同步 A 股全市场日 K 线入库     |
+
+> cron 表达式与时区是**模块常量**（`src/symbols/symbols.constants.ts`）而非环境变量——
+> `@Cron` 在装饰器求值期（模块 import 时）取参，而 `.env` 要到 `ConfigModule.forRoot()`
+> 执行时才写入 `process.env`，用 `process.env.XXX` 会静默拿到 `undefined`。
+
+### 首次部署：创建数据表
+
+生产环境 `synchronize = false`（见 `src/database/postgres.module.ts`），**不会自动建表**，
+首次部署需手工执行 `db/` 下的建表脚本各一次：
+
+```bash
+psql "$PG_URL" -f db/001-stock-symbols.sql
+psql "$PG_URL" -f db/002-daily-klines.sql
+```
+
+**开发环境无需执行**：`synchronize` 会自动建表。
+
+> `stock_symbols` 表**没有软删除**（不继承 `BaseEntity`）：要删标的一律硬删
+> （`DELETE FROM stock_symbols WHERE code = '...'`）。
+
+### 首次部署：获取 CLI 二进制
+
+`src/scripts/westock.exe`（腾讯 Go CLI）与 `westock-data-clawhub.mjs` **不入库**
+（被 .gitignore 排除），克隆后需执行一次：
+
+```bash
+npm run setup:westock
+```
+
+> 缺失时不会导致应用起不来，但**相关的 K 线/搜索/分时接口会返回 503** 并提示该命令。
+>
+> `nest-cli.json` 已把 `src/scripts/**` 同步到 `dist/scripts/`，故 prod 下路径解析与 dev 一致，
+> 且可在目标机器上直接跑 `dist/scripts/setup.*` 重新获取。
+
 ## 接口调试
 
-- `REST_CLIENT.http` — VS Code REST Client 可直接执行的接口集合，覆盖健康检查、认证、通达信与证券数据（WeStock）接口
+- `REST_CLIENT.http` — VS Code REST Client 可直接执行的接口集合，覆盖健康检查、认证、标的代码（Symbols）与 K 线（Klines）接口
 - 该文件可直接复用登录接口返回的 `accessToken`（通过 `{{login.response.body.data.accessToken}}` 变量引用）
 
 ## 文档结构
@@ -57,9 +100,11 @@
 - `WESTOCK_DATA_CLAWHUB.md` — westock-data-clawhub CLI 用法（npx 包，命令语法与示例）
 - `docs/api-health.md` — 健康检查接口
 - `docs/api-auth.md` — 认证接口（注册、登录、刷新、登出、用户信息、修改密码、登出所有设备）
-- `docs/api-tdx.md` — 通达信接口（K线、五档盘口、当日与历史分时、当日与历史分笔成交、证券数量与列表）
 - `docs/api-config.md` — 系统配置（认证机制、环境变量、开发环境）
-- `docs/api-westock.md` — 证券数据（搜索、分时、K线；表格列随命令变化、503/504 错误说明）
+- `docs/api-symbols.md` — 标的代码（stock-sdk 数据源，每日定时同步落库、手动触发、数量统计）
+- `docs/api-klines.md` — K 线（盘后同步、单位换算、多周期实时查询）
+- `db/001-stock-symbols.sql` — 标的代码表的生产建表 DDL（生产手工执行一次）
+- `db/002-daily-klines.sql` — 日 K 线表的生产建表 DDL（生产手工执行一次）
 
 > `docs/api-*.md` 的文档顶部有返回 `API.md` 的导航链接。
 > 接口有变动时需同步更新对应文档（见 `CLAUDE.md` 代码规范）。

@@ -1,6 +1,7 @@
 import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { APP_FILTER, APP_GUARD } from '@nestjs/core'
+import { ScheduleModule } from '@nestjs/schedule'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { resolve } from 'path'
 import { AppController } from './app.controller'
@@ -13,8 +14,12 @@ import { GLOBAL_CONFIG } from './config/global.config'
 import { PostgresModule } from './database/postgres.module'
 import { RedisModule } from './database/redis.module'
 import { RedisService } from './database/redis.service'
+import { KlinesModule } from './klines/klines.module'
+import { StockSdkModule } from './stock-sdk/stock-sdk.module'
+import { SymbolsModule } from './symbols/symbols.module'
 import { TdxModule } from './tdx/tdx.module'
-import { WestockModule } from './westock/westock.module'
+import { WestockCliModule } from './westock-cli/westock-cli.module'
+import { WestockDataModule } from './westock-data/westock-data.module'
 
 // @Global() 使本模块的 providers/exports 在所有子模块中可直接注入，无需重复 import
 @Global()
@@ -48,9 +53,16 @@ import { WestockModule } from './westock/westock.module'
     }),
     PostgresModule,
     RedisModule,
+    // 定时任务：ScheduleModule 的探索器会全局扫描各模块的 @Cron，
+    // 故只有此处需要注册，子模块不必再 import
+    ScheduleModule.forRoot(),
     AuthModule,
     TdxModule,
-    WestockModule,
+    WestockCliModule,
+    WestockDataModule,
+    SymbolsModule,
+    KlinesModule,
+    StockSdkModule,
   ],
 
   controllers: [AppController],

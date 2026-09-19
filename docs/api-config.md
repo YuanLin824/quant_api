@@ -42,7 +42,9 @@
 | `POST /auth/change-password` | 每小时最多 5 次      |
 | `POST /auth/logout`          | 不限流               |
 | `POST /auth/logout-all`      | 不限流               |
-| TDX                          | 不限流               |
+
+> 除上表两条登出外**没有其他豁免**：行情类接口（`/api/klines`、`/api/symbols`）
+> 沿用全局默认——它们会遍历全市场写库，或每请求起一个子进程。
 
 > 触发限流返回 `429`（`message` 为「请求过于频繁，请稍后重试」）；账号锁定返回 `403`，两者含义不同。
 
@@ -131,13 +133,15 @@ curl -X POST http://localhost:3001/api/auth/login \
 curl http://localhost:3001/api/auth/profile \
   -H "Authorization: Bearer <access_token>"
 
-# 获取股票 K 线（价格单位为厘，元 = 厘 / 1000）
-curl "http://localhost:3001/api/tdx/kline/600519?period=day&count=10" \
+# 同步证券代码（首次需先执行，K 线同步依赖它产出的代码表）
+curl -X POST "http://localhost:3001/api/symbols/sync" \
   -H "Authorization: Bearer <access_token>"
 
-# 批量获取五档盘口
-curl -X POST "http://localhost:3001/api/tdx/quotes" \
-  -H "Authorization: Bearer <access_token>" \
-  -H "Content-Type: application/json" \
-  -d '{"codes": ["600519"]}'
+# 实时查询日 K 线（走 westock CLI、不读库；价格单位为元，不传 fq 为前复权）
+curl "http://localhost:3001/api/klines?code=sh600036&limit=10" \
+  -H "Authorization: Bearer <access_token>"
+
+# 实时查询 60 分钟线、不复权
+curl "http://localhost:3001/api/klines?code=sh600036&period=m60&fq=nofq&limit=10" \
+  -H "Authorization: Bearer <access_token>"
 ```

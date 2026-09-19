@@ -24,6 +24,20 @@ export const KLINE_PERIODS = Object.keys(KLINE_CATEGORY_MAP)
 /** K 线默认周期 */
 export const DEFAULT_KLINE_PERIOD: KlinePeriodKey = 'day'
 
+/**
+ * 分钟级周期
+ *
+ * 与日线级有两点不同（都在库内按 `MINUTE_KLINE_CATEGORIES` 分支处理）：
+ * - **时间含时分**（`decodeMinuteTime`），日线级则固定为当日 15:00（`decodeDayTime`）
+ * - **成交量口径不同**：库对分钟级做了 `÷100`，日线级不做
+ */
+export const MINUTE_PERIODS: readonly KlinePeriodKey[] = ['1m', '5m', '15m', '30m', '60m']
+
+/** 是否分钟级周期 */
+export function isMinutePeriod(period: KlinePeriodKey): boolean {
+  return MINUTE_PERIODS.includes(period)
+}
+
 /** K 线数量上限（库限制） */
 export const KLINE_MAX_COUNT = 800
 
