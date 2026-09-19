@@ -91,6 +91,10 @@ describe('StockKlineService', () => {
       where: jest.fn().mockReturnThis(),
       // upsert 不读返回值；purgeExpired 读 affected
       execute: jest.fn().mockResolvedValue({ affected: 0 }),
+      // 概览统计走 select 链（两次 getRawOne：先 COUNT 再 MIN/MAX）
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      getRawOne: jest.fn().mockResolvedValue(null),
     }
     tdx = { getKline: jest.fn().mockResolvedValue({ count: 0, bars: [] }) }
     westock = { kline: jest.fn().mockResolvedValue({ columns: CLI_COLUMNS, rows: [], total: 0 }) }
@@ -405,6 +409,38 @@ describe('StockKlineService', () => {
       await expect(service.getRealtime('sh600036')).rejects.toBeInstanceOf(
         ServiceUnavailableException
       )
+    })
+  })
+
+  describe('概览统计', () => {
+    it('earliest/latest 归一化为 YYYY-MM-DD，而不是 Date 直接序列化出的 UTC 串', async () => {
+      // MIN/MAX 经 raw query 回来的是 Date（驱动按本地零点解析），
+      // 直接返回会被 JSON 序列化成 "2024-09-18T16:00:00.000Z"，看起来早一天
+      qb.getRawOne.mockResolvedValueOnce({ count: '2' }).mockResolvedValueOnce({
+        earliest: new Date(2024, 8, 19, 0, 0, 0),
+        latest: new Date(2026, 8, 18, 0, 0, 0),
+      })
+      repo.count.mockResolvedValue(1234)
+
+      const stats = await service.getStats()
+
+      expect(stats).toEqual({
+        symbols: 2,
+        rows: 1234,
+        earliest: '2024-09-19',
+        latest: '2026-09-18',
+      })
+    })
+
+    it('表为空时 earliest/latest 为 null', async () => {
+      qb.getRawOne.mockResolvedValueOnce({ count: '0' }).mockResolvedValueOnce({
+        earliest: null,
+        latest: null,
+      })
+
+      const stats = await service.getStats()
+
+      expect(stats).toEqual({ symbols: 0, rows: 0, earliest: null, latest: null })
     })
   })
 

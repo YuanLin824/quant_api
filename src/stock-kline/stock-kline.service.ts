@@ -110,6 +110,21 @@ function toDateString(time: Date): string {
 }
 
 /**
+ * 聚合查询返回的日期值 → `YYYY-MM-DD`（`null` 原样透传）
+ *
+ * `trade_date` 是 `date` 列，但 `MIN`/`MAX` 经 raw query 回来的是 **`Date` 对象**
+ * （pg 驱动按**进程本地时区**解析成当日零点），直接交给 JSON 序列化会变成 UTC ISO 串
+ * ——在 UTC+8 下看起来比真实交易日**早一天**。
+ *
+ * 按本地时区取日期即可对上真实交易日：驱动构造的恰恰也是本地零点，
+ * 两边时区一致，故与进程部署在哪个时区无关。
+ */
+function toDayString(value: Date | string | null | undefined): string | null {
+  if (value === null || value === undefined) return null
+  return value instanceof Date ? toDateString(value) : value
+}
+
+/**
  * CLI 时间列的归一化
  *
  * **分钟周期**带时分秒（`2026-09-18 15:00:00`），日线及以上只有日期。
@@ -312,17 +327,19 @@ export class StockKlineService {
 
     const total = await this.klineRepo.count()
 
+    // 泛型写 Date 而非 string：聚合回来的确实是 Date（类型标注挡不住运行时，
+    // 但写对能提示下游别直接当字符串用），再经 toDayString 归一化
     const range = await this.klineRepo
       .createQueryBuilder('k')
       .select('MIN(k.tradeDate)', 'earliest')
       .addSelect('MAX(k.tradeDate)', 'latest')
-      .getRawOne<{ earliest: string | null; latest: string | null }>()
+      .getRawOne<{ earliest: Date | null; latest: Date | null }>()
 
     return {
       symbols: Number(symbols?.count ?? 0),
       rows: total,
-      earliest: range?.earliest ?? null,
-      latest: range?.latest ?? null,
+      earliest: toDayString(range?.earliest),
+      latest: toDayString(range?.latest),
     }
   }
 
