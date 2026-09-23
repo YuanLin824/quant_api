@@ -1,0 +1,128 @@
+# 系统配置
+
+[← 返回目录](../API.md)
+
+## 认证机制
+
+### JWT 双密钥方案
+
+系统使用 JWT 双密钥方案进行身份验证：
+
+- **Access Token**: 用于接口认证，有效期较短（默认 15 分钟）
+- **Refresh Token**: 用于刷新访问令牌，有效期较长（默认 7 天）
+
+### 令牌轮换
+
+每次刷新令牌时，旧的 Refresh Token 会被吊销，同时签发新的 Access Token 和 Refresh Token。这提高了安全性，防止 Refresh Token 被盗用。
+
+### 多设备控制
+
+- 默认最多支持 5 个设备同时登录
+- 超过设备限制时，会自动踢出最早登录的设备
+- 登出操作只吊销当前设备的 Refresh Token
+
+### 安全特性
+
+1. **密码加密**: 使用 bcrypt 算法加密存储（12 轮）
+2. **登录失败限制**: 连续 5 次密码错误后账号被锁定（返回 `403`），窗口自**首次失败**起算 15 分钟
+3. **防时序攻击**: 密码比对使用恒定时间算法，用户不存在时执行等价比对
+4. **防用户名枚举**: 用户不存在与密码错误返回相同消息
+5. **请求限流**: 全局限流 + 按接口差异化配置，详见下表
+6. **安全头**: 使用 Helmet 设置安全 HTTP 头（CSP、HSTS、XSS 保护等）
+7. **请求体限制**: 10KB，防止大负载 DoS
+
+### 限流规则
+
+| 接口                         | 限制                 |
+| ---------------------------- | -------------------- |
+| 全局默认                     | 60 秒内最多 60 次    |
+| `POST /auth/register`        | 每小时最多 5 次      |
+| `POST /auth/login`           | 每 10 分钟最多 10 次 |
+| `POST /auth/refresh`         | 每 10 分钟最多 20 次 |
+| `POST /auth/logout`          | 不限流               |
+| `POST /auth/logout-all`      | 不限流               |
+| `POST /auth/change-password` | 每小时最多 5 次      |
+
+> 除上表两条登出外**没有其他豁免**；`GET /auth/profile` 未单独配置，走全局默认。
+
+> 触发限流返回 `429`（`message` 为「请求过于频繁，请稍后重试」）；
+> 登录失败锁定返回 `403`（连续失败 5 次锁 15 分钟），两者含义不同。
+
+---
+
+## 环境变量配置
+
+### 必需的环境变量
+
+```bash
+# 数据库连接
+PG_URL="postgres://user:pass@host:port/db"
+REDIS_URL="redis://user:pass@host:port/db"
+
+# JWT 密钥（至少 32 字符，且两者不能相同）
+JWT_ACCESS_SECRET_KEY="your-access-secret-key"
+JWT_REFRESH_SECRET_KEY="your-refresh-secret-key"
+```
+
+### 可选的环境变量
+
+```bash
+# 运行模式：仅接受 dev / prod（不是 production）
+NODE_ENV="dev"
+
+# 服务配置
+PORT="3001"                    # 默认 3000
+API_PREFIX="/api"              # 默认 /api
+
+# JWT 配置（支持 s/m/h/d 单位）
+JWT_ACCESS_EXPIRES_IN="15m"
+JWT_REFRESH_EXPIRES_IN="7d"
+
+# 认证配置
+AUTH_MAX_DEVICES="5"
+
+# Redis 配置
+REDIS_KEY_PREFIX="quant-"
+
+# CORS 配置（生产环境必须，逗号分隔多个来源）
+ALLOWED_ORIGINS="https://example.com"
+```
+
+> `NODE_ENV` 决定加载哪一组 `.env` 文件与是否开启数据库表结构自动同步，
+> 完整加载顺序见项目 `.claude/environment.md`。
+
+---
+
+## 开发环境
+
+### 启动服务
+
+```bash
+# 配置环境变量（按实际地址填写 PG_URL / REDIS_URL）
+cp .env.example .env
+# 编辑 .env 文件，配置必要的环境变量
+
+# 启动开发服务器
+npm run start:dev
+```
+
+### 测试接口
+
+```bash
+# 健康检查
+curl http://localhost:3001/api/health
+
+# 注册用户
+curl -X POST http://localhost:3001/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"Password@123"}'
+
+# 用户登录
+curl -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"Password@123"}'
+
+# 获取用户信息（需要替换 <access_token>）
+curl http://localhost:3001/api/auth/profile \
+  -H "Authorization: Bearer <access_token>"
+```

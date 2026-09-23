@@ -1,0 +1,67 @@
+@baseUrl = http://localhost:3001/api
+
+
+### 健康检查
+GET {{baseUrl}}/health
+Content-Type: application/json
+
+
+### 用户注册
+# @name register
+# 使用测试账户注册；默认管理员 QuantAdmin 由应用启动时自动创建，重复注册会返回 409
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "Test@1234"
+}
+
+
+### 用户登录
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "QuantAdmin",
+  "password": "Quant.Admin"
+}
+
+
+### 刷新令牌
+# @name refresh
+POST {{baseUrl}}/auth/refresh
+Authorization: Bearer {{login.response.body.data.refreshToken}}
+
+
+### 用户登出
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{login.response.body.data.refreshToken}}"
+}
+
+
+### 登出所有设备
+POST {{baseUrl}}/auth/logout-all
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 修改密码
+# oldPassword 须为当前账户密码（登录示例用的是默认管理员 Quant.Admin）
+# 执行成功后所有 refreshToken 失效，刷新令牌示例需重新登录
+POST {{baseUrl}}/auth/change-password
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+{
+  "oldPassword": "Quant.Admin",
+  "newPassword": "NewPassword@456"
+}
+
+
+### 获取用户信息
+GET {{baseUrl}}/auth/profile
+Authorization: Bearer {{login.response.body.data.accessToken}}
