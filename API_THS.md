@@ -1,7 +1,7 @@
 # 同花顺金融数据 API 文档
 
 > 面向 AI Agent、量化研究与 Fintech 应用的 A 股结构化金融数据 REST API + MCP Tools 文档站。
-> 完整聚合见 [THS_LLMS_FULL.md](./THS_LLMS_FULL.md)。在线浏览 https://fuyao.aicubes.cn/docs
+> 完整聚合见 [API_THS_FULL.md](./API_THS_FULL.md)。在线浏览 https://fuyao.aicubes.cn/docs
 
 ## 调用频率与限流
 

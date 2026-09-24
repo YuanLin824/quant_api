@@ -6,6 +6,12 @@
 - **AppSetup** (`src/app.setup.ts`) — 应用公共装配（Helmet / CORS / 全局前缀 / 校验管道），由 `main.ts` 与 e2e 测试共用，避免测试环境与线上配置漂移
 - **AppController / AppService** (`src/app.controller.ts` / `src/app.service.ts`) — 健康检查接口，返回服务状态、版本号、运行时长与内存占用
 - **AuthModule** (`src/auth/`) — 认证模块，JWT 双密钥方案（access + refresh token）
+- **StockSymbolsModule** (`src/stock-symbols/`) — 股票标的（代码表）服务，纯服务层（无 controller），当前为空骨架
+- **数据源模块** (`src/api-*/`) — 四个外部行情数据源接入，均为纯服务层（无 controller）、当前为空骨架：
+  `ApiThsModule`（同花顺，契约见 `API_THS.md`）、
+  `ApiTencentModule`（腾讯，契约见 `API_TENCENT.md`）、
+  `ApiTdxModule`（通达信，契约见 `API_TDX.md`，待补全）、
+  `ApiEastMoneyModule`（东方财富，契约见 `API_EAST_MONEY.md`，待补全）
 - **Common** (`src/common/`) — 跨模块共享件：`BaseEntity` 实体基类、全局异常过滤器、请求日志中间件
 - **Config** (`src/config/`) — 配置集中管理：`ENV_KEYS` 常量、`registerAs` 命名空间配置、Winston 日志器
 - **PostgresModule** (`src/database/postgres.module.ts`) — TypeORM 数据源配置
