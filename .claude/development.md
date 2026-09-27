@@ -42,13 +42,41 @@
 > 实体被删除后，对应的表会原样留在库中（含数据），需要手工 `DROP TABLE` 清理。
 > 生产环境 `synchronize = false`，既不建表也不改表，需手工执行建表 DDL。
 
+### 生产环境的建表 DDL
+
+可从开发库直接导出（`synchronize` 已按实体建好）：
+
+```bash
+pg_dump --schema-only -t stock_symbols "$PG_URL" > stock_symbols.sql
+```
+
+> ⚠️ **`thscode` 必须是主键**：标的同步用 `upsert(..., ['thscode'])` 生成 `ON CONFLICT (thscode)`，
+> 该列须有主键（或唯一约束/索引），否则会直接报错，而不会降级为普通插入。
+> 列名一律 snake_case，与实体上的显式 `name:` 一一对应——`synchronize` 的对账按列名比对。
+
 ## 定时任务
 
-当前**无任何定时任务**，也**未注册 `@nestjs/schedule`**（最后一个使用它的模块已移除）。
+`ScheduleModule.forRoot()` 已在 `AppModule` 注册，当前有 1 个任务：
 
+| 任务           | 位置                              | 时间                                | 说明                                      |
+| -------------- | --------------------------------- | ----------------------------------- | ----------------------------------------- |
+| 标的代码表同步 | `StockSymbolsSchedule.handleSync` | 每周一至周五 17:30（Asia/Shanghai） | 从同花顺拉取个股与指数/板块并 upsert 落库 |
+
+> **约定**：定时任务写在模块的 `模块.schedule.ts` 中（只负责触发时机与异常收口），
+> 业务实现留在 `模块.service.ts`，两者分离以便单测与手动调用。
+>
 > 新增任务时注意：cron 表达式与时区须是**模块常量**而非环境变量——
 > `@Cron` 在装饰器求值期（模块 import 时）取参，而 `.env` 要到 `ConfigModule.forRoot()`
-> 执行时才写入 `process.env`，用 `process.env.XXX` 会静默拿到 `undefined`。
+> 执行时才写入 `process.env`，用 `process.env.XXX` 会静默拿到 `undefined`
+> （范例见 `src/stock-symbols/stock-symbols.constants.ts`）。
+
+> ⚠️ **`@nestjs/schedule` 的版本须锁在 6.x**：12.x 起该包已 ESM-only（`type: module`），
+> 与本项目的 CJS 体系冲突——jest 会直接报 `Must use import to load ES Module`。
+> 6.x 是 CJS，且 peerDependencies 兼容 Nest 11。升级 Nest 12 时需一并评估模块体系迁移。
+
+> ⚠️ **e2e 测试的副作用**：`test/app.e2e-spec.ts` 跑的是完整 `AppModule` 与真实数据库。
+> 若库里 `stock_symbols` 为空且 `.env` 配了 `THS_API_KEY`，启动补齐会**真的打同花顺**并写入数据。
+> 需要隔离时，先给测试库预置任意一行标的即可跳过补齐（判据是 `repo.count() > 0`）。
 
 ## 测试
 
@@ -72,7 +100,7 @@
 
 ## 接口调试
 
-- `REST_CLIENT.http` — VS Code REST Client 可直接执行的接口集合，覆盖健康检查与认证接口
+- `REST_CLIENT.http` — VS Code REST Client 可直接执行的接口集合，覆盖健康检查、认证与标的代码表接口
 - 该文件可直接复用登录接口返回的 `accessToken`（通过 `{{login.response.body.data.accessToken}}` 变量引用）
 
 ## 文档结构
@@ -83,6 +111,7 @@
 - `docs/api-health.md` — 健康检查接口
 - `docs/api-auth.md` — 认证接口（注册、登录、刷新、登出、用户信息、修改密码、登出所有设备）
 - `docs/api-config.md` — 系统配置（认证机制、环境变量、开发环境）
+- `docs/api-symbols.md` — 标的代码表（分页查询、手动触发同步）
 
 > `docs/api-*.md` 的文档顶部有返回 `API.md` 的导航链接。
 > 接口有变动时需同步更新对应文档（见 `CLAUDE.md` 代码规范）。

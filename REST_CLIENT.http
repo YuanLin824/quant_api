@@ -65,3 +65,21 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 ### 获取用户信息
 GET {{baseUrl}}/auth/profile
 Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 查询标的代码表
+# 默认只返回在市标的；可选 assetType / keyword / includeDelisted / page / pageSize
+GET {{baseUrl}}/stock-symbols?page=1&pageSize=20
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 查询标的同步状态
+# 返回最后同步时间、条数分布、是否有同步在进行中
+GET {{baseUrl}}/stock-symbols/sync-status
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 手动触发标的同步
+# 真实调用上游同花顺，耗时 10～25 秒；每小时最多 5 次
+POST {{baseUrl}}/stock-symbols/sync
+Authorization: Bearer {{login.response.body.data.accessToken}}

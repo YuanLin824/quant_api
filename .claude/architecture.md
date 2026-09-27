@@ -6,7 +6,9 @@
 - **AppSetup** (`src/app.setup.ts`) — 应用公共装配（Helmet / CORS / 全局前缀 / 校验管道），由 `main.ts` 与 e2e 测试共用，避免测试环境与线上配置漂移
 - **AppController / AppService** (`src/app.controller.ts` / `src/app.service.ts`) — 健康检查接口，返回服务状态、版本号、运行时长与内存占用
 - **AuthModule** (`src/auth/`) — 认证模块，JWT 双密钥方案（access + refresh token）
-- **StockSymbolsModule** (`src/stock-symbols/`) — 股票标的（代码表）服务，纯服务层（无 controller），当前为空骨架
+- **StockSymbolsModule** (`src/stock-symbols/`) — 股票标的（代码表）服务；
+  每交易日 17:30 从同花顺同步个股与指数/板块并 upsert 落库（表 `stock_symbols`），
+  同时对外提供分页查询、同步状态概要、手动触发同步三个接口（均需登录）
 - **数据源模块** (`src/api-*/`) — 四个外部行情数据源接入，均为纯服务层（无 controller）：
   `ApiThsModule`（同花顺，契约见 `API_THS.md`）已实现「标的列表获取」并收口通用请求层（鉴权 / 超时 / 信封解包 / 错误码映射）；
   其余三个（`ApiTencentModule` / `ApiTdxModule` / `ApiEastMoneyModule`）仍为空骨架，契约见 `API_TENCENT.md` / `API_TDX.md` / `API_EAST_MONEY.md`
@@ -42,6 +44,17 @@
    - **`THS_API_KEY` 缺失不阻塞启动**：与 Redis / JWT 的 fail-fast 相反，缺 Key 只在发起请求时抛 503。同花顺是可选外部数据源，不应因未配置就阻止「本地只调认证接口」或「CI 无密钥跑测试」
    - **不做自动重试、翻页串行**：契约明确要求限流（HTTP 429 / `code=4001`）时避免立即连续重试；`getAllTickers()` 因此串行翻页，并设轮数上限兜底防上游行为异常导致死循环
    - **服务层自带入参校验**：本模块没有 controller，不经全局 ValidationPipe，DTO 上的校验装饰器**不会自动生效**——故由 `assertValidDto()` 在服务入口用 `validate()` 显式触发。异常消息传字符串而非数组，否则 `HttpException` 会把数组消息退化成构造器名（`Bad Request`）
+
+9. **标的代码表同步（stock-symbols）**: 定时（每交易日 17:30）同步同花顺的 `a-share` + `a-share-index` 并落库。
+   采用**增量 upsert**（`conflictPaths: ['thscode']`，行的 `id` 跨轮次保持稳定），上游本轮未返回的标的**不删除**，
+   而是置 `delistedAt` 标记为「已消失」，使下游能按 thscode 稳定引用而不产生悬空引用。
+   - **两段式标记**：事务内先全量置 `delistedAt`、再由 upsert 把本轮返回的置回 `NULL`——不比较时间戳，规避 NTP 回拨导致的漏标
+   - **实体不继承 `BaseEntity`**：表结构直接映射上游 `ThsTickerItem` 的**全部字段**，以 `thscode` 为主键——省去代理主键 uuid，也让 upsert 的冲突键与主键合一；代码表没有「人工停用」需求，故不需要 status / 软删除那一套。仅额外保留两个本地字段：`syncAt`（最后同步时间）与 `delistedAt`（退市标记）
+   - **网络在事务外 + upsert 按 1000 行分片**：一次 sweep 最坏几十秒，进事务会长期占用连接池；全量约 7000 行 × 9 列会逼近 PostgreSQL 的 65535 绑定参数上限（`EntityManager.upsert` **不自动分片**）
+   - **两道上游异常护栏**：返回空列表时跳过写入；返回量不足存量活跃数一半时只写入、不标记——都为防止把大批正常标的误判为退市
+   - **重入返回 `skipped` 而非抛异常**：防重入标志由定时任务、启动补齐、手动接口三方共用；返回 `skipped` 让手动接口能回「已有同步正在进行中」（HTTP 200）而不是向调用方抛 409
+
+> `@nestjs/schedule` 锁定在 **6.x**：12.x 起该包 ESM-only，与本项目 CJS 体系冲突，详见 `development.md` 的定时任务章节。
 
 ## 日志
 

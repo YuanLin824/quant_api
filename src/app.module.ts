@@ -1,6 +1,7 @@
 import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { APP_FILTER, APP_GUARD } from '@nestjs/core'
+import { ScheduleModule } from '@nestjs/schedule'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { resolve } from 'path'
 import { ApiEastMoneyModule } from './api-east-money/api-east-money.module'
@@ -49,6 +50,8 @@ import { StockSymbolsModule } from './stock-symbols/stock-symbols.module'
       // 库的默认文案 "ThrottlerException: Too Many Requests" 会把框架内部类名下发给调用方
       errorMessage: '请求过于频繁，请稍后重试',
     }),
+    // 定时任务调度器：各模块用 @Cron 声明的任务由它统一注册
+    ScheduleModule.forRoot(),
     PostgresModule,
     RedisModule,
     AuthModule,
