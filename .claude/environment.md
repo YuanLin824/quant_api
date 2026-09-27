@@ -44,6 +44,7 @@ JWT_REFRESH_EXPIRES_IN="7d"   # 默认 7 天，支持 s/m/h/d 单位
 AUTH_MAX_DEVICES="5"          # 默认 5 个设备
 REDIS_KEY_PREFIX="quant-"     # Redis key 前缀，默认空字符串（不配置则不加前缀）
 ALLOWED_ORIGINS="https://example.com"  # 生产环境必须配置，否则启动失败；多个用逗号分隔
+THS_API_KEY=""                 # 同花顺数据接口密钥；不配置不影响启动，调用同花顺接口时才报错
 ```
 
 > `PG_URL` / `REDIS_URL` 是应用实际读取的统一连接串，在 `.env.example` 中分别由 `PG_*`、`REDIS_*` 分项拼接生成

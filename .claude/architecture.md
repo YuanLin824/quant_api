@@ -7,11 +7,9 @@
 - **AppController / AppService** (`src/app.controller.ts` / `src/app.service.ts`) — 健康检查接口，返回服务状态、版本号、运行时长与内存占用
 - **AuthModule** (`src/auth/`) — 认证模块，JWT 双密钥方案（access + refresh token）
 - **StockSymbolsModule** (`src/stock-symbols/`) — 股票标的（代码表）服务，纯服务层（无 controller），当前为空骨架
-- **数据源模块** (`src/api-*/`) — 四个外部行情数据源接入，均为纯服务层（无 controller）、当前为空骨架：
-  `ApiThsModule`（同花顺，契约见 `API_THS.md`）、
-  `ApiTencentModule`（腾讯，契约见 `API_TENCENT.md`）、
-  `ApiTdxModule`（通达信，契约见 `API_TDX.md`，待补全）、
-  `ApiEastMoneyModule`（东方财富，契约见 `API_EAST_MONEY.md`，待补全）
+- **数据源模块** (`src/api-*/`) — 四个外部行情数据源接入，均为纯服务层（无 controller）：
+  `ApiThsModule`（同花顺，契约见 `API_THS.md`）已实现「标的列表获取」并收口通用请求层（鉴权 / 超时 / 信封解包 / 错误码映射）；
+  其余三个（`ApiTencentModule` / `ApiTdxModule` / `ApiEastMoneyModule`）仍为空骨架，契约见 `API_TENCENT.md` / `API_TDX.md` / `API_EAST_MONEY.md`
 - **Common** (`src/common/`) — 跨模块共享件：`BaseEntity` 实体基类、全局异常过滤器、请求日志中间件
 - **Config** (`src/config/`) — 配置集中管理：`ENV_KEYS` 常量、`registerAs` 命名空间配置、Winston 日志器
 - **PostgresModule** (`src/database/postgres.module.ts`) — TypeORM 数据源配置
@@ -39,6 +37,11 @@
 7. **异常统一收口**: 全局 `AllExceptionsFilter` 将 HttpException、TypeORM `QueryFailedError`（按 PostgreSQL 错误码映射）及未知异常统一为 `{ code, data, message }`，并记录含客户端 IP 的结构化日志。
    - **失败时 `data` 恒为 `null`**：具体原因一律由 `message` 承载，不再把 Nest 的原始响应对象塞进 `data`（那会让 `{ message, error, statusCode }` 与顶层字段重复）
    - **校验错误并入 `message`**：ValidationPipe 抛出的 `BadRequestException`，其 `exception.message` 只有固定的 `Bad Request Exception`，故优先取 `getResponse().message` 数组并以 `; ` 连接，保证调用方能定位到具体参数
+
+8. **同花顺数据源（api-ths）**: 请求层在 `ApiThsService` 的私有 `request()` 中收口——注入 `X-api-key`、`AbortSignal.timeout` 超时、解包 `{ code, message, request_id, data }` 信封、上游错误码经 `THS_ERROR_MAP` 映射为内置异常（表结构对齐 `DB_ERROR_MAP`）。
+   - **`THS_API_KEY` 缺失不阻塞启动**：与 Redis / JWT 的 fail-fast 相反，缺 Key 只在发起请求时抛 503。同花顺是可选外部数据源，不应因未配置就阻止「本地只调认证接口」或「CI 无密钥跑测试」
+   - **不做自动重试、翻页串行**：契约明确要求限流（HTTP 429 / `code=4001`）时避免立即连续重试；`getAllTickers()` 因此串行翻页，并设轮数上限兜底防上游行为异常导致死循环
+   - **服务层自带入参校验**：本模块没有 controller，不经全局 ValidationPipe，DTO 上的校验装饰器**不会自动生效**——故由 `assertValidDto()` 在服务入口用 `validate()` 显式触发。异常消息传字符串而非数组，否则 `HttpException` 会把数组消息退化成构造器名（`Bad Request`）
 
 ## 日志
 

@@ -50,6 +50,26 @@
 > `@Cron` 在装饰器求值期（模块 import 时）取参，而 `.env` 要到 `ConfigModule.forRoot()`
 > 执行时才写入 `process.env`，用 `process.env.XXX` 会静默拿到 `undefined`。
 
+## 测试
+
+分两套，配置各自独立：
+
+- **单元测试** — 与源码同目录（`src/模块/模块.service.spec.ts`），`npm test`
+  （配置见 `package.json` 的 `jest` 字段，rootDir 为 `src`，testRegex 为 `.*\.spec\.ts$`）
+- **端到端测试** — `test/*.e2e-spec.ts`，`npm run test:e2e`（配置见 `test/jest-e2e.json`）
+
+单元测试的写法约定（沿用 `auth.service.spec.ts` / `api-ths.service.spec.ts`）：
+
+- **不开 `Test.createTestingModule`** —— 直接 `new Service(mock依赖 as unknown as 真类型)`，省去 DI 容器开销
+- 依赖用 `jest.fn()` 手写 mock；在 `beforeEach` 中重置 mock 并重建被测服务
+- 用例描述用中文；断言优先 `rejects.toBeInstanceOf(...)` 配 `rejects.toThrow('中文消息')`
+- 复杂的上游响应在文件顶部用工厂函数构造（如 `okResponse()` / `makeItems()`），避免各用例重复拼装
+
+> ⚠️ **外部依赖必须 mock，且默认应拒绝**：`jest.spyOn(globalThis, 'fetch')` 若不提供 mock 实现，
+> 调用时会**真的发出网络请求**（本仓库曾因此在单元测试里误打到上游 API）。
+> 推荐在 `beforeEach` 里统一 `mockRejectedValue(new Error('单元测试不应发起真实网络请求'))`，
+> 各用例再按需 `mockResolvedValue(...)` 覆盖——漏 mock 只会让测试失败，而不会静默发出真实请求。
+
 ## 接口调试
 
 - `REST_CLIENT.http` — VS Code REST Client 可直接执行的接口集合，覆盖健康检查与认证接口

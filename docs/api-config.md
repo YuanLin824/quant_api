@@ -86,6 +86,9 @@ REDIS_KEY_PREFIX="quant-"
 
 # CORS 配置（生产环境必须，逗号分隔多个来源）
 ALLOWED_ORIGINS="https://example.com"
+
+# 外部数据源（不配置不影响启动，调用相关接口时才报错）
+THS_API_KEY=""
 ```
 
 > `NODE_ENV` 决定加载哪一组 `.env` 文件与是否开启数据库表结构自动同步，

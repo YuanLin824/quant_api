@@ -8,6 +8,7 @@ export const CONFIG_MODULES = {
   GLOBAL: Symbol('global'),
   PG: Symbol('postgres'),
   REDIS: Symbol('redis'),
+  THS: Symbol('ths'),
 } as const
 
 /** 所有环境变量名集中管理，避免散落各处的魔法字符串 */
@@ -36,4 +37,7 @@ export const ENV_KEYS = {
   // 统一连接串 redis://[user]:[pass]@host:port[/db]
   REDIS_URL: 'REDIS_URL',
   REDIS_KEY_PREFIX: 'REDIS_KEY_PREFIX',
+
+  // 同花顺金融数据 - 数据源
+  THS_API_KEY: 'THS_API_KEY',
 } as const
