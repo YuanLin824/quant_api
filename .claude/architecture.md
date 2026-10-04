@@ -10,7 +10,7 @@
   每交易日 17:30 从同花顺同步个股与指数/板块并 upsert 落库（表 `stock_symbols`），
   同时对外提供分页查询、同步状态概要、手动触发同步三个接口（均需登录）
 - **数据源模块** (`src/api-*/`) — 四个外部行情数据源接入，均为纯服务层（无 controller）：
-  `ApiThsModule`（同花顺，契约见 `API_THS.md`）已实现「标的列表获取」并收口通用请求层（鉴权 / 超时 / 信封解包 / 错误码映射）；
+  `ApiThsModule`（同花顺，契约见 `API_THS.md`）已实现「标的列表获取」与「历史 K 线」，并收口通用请求层（鉴权 / 超时 / 信封解包 / 错误码映射）；
   其余三个（`ApiTencentModule` / `ApiTdxModule` / `ApiEastMoneyModule`）仍为空骨架，契约见 `API_TENCENT.md` / `API_TDX.md` / `API_EAST_MONEY.md`
 - **Common** (`src/common/`) — 跨模块共享件：`BaseEntity` 实体基类、全局异常过滤器、请求日志中间件
 - **Config** (`src/config/`) — 配置集中管理：`ENV_KEYS` 常量、`registerAs` 命名空间配置、Winston 日志器

@@ -16,6 +16,8 @@ import { type IThsConfig } from './api-ths.config'
 import {
   THS_BASE_URL,
   THS_CODE,
+  THS_KLINE_MAX_WINDOW_MS,
+  THS_KLINE_PATH,
   THS_REQUEST_TIMEOUT_MS,
   THS_TICKER_LIST_DEFAULT_LIMIT,
   THS_TICKER_LIST_PATH,
@@ -23,7 +25,14 @@ import {
   THS_TICKER_SWEEP_PAGE_SIZE,
   type ThsAssetType,
 } from './api-ths.constants'
-import { type ThsApiEnvelope, type ThsTickerItem, type ThsTickerListData } from './api-ths.types'
+import {
+  type ThsApiEnvelope,
+  type ThsKlineData,
+  type ThsPriceBar,
+  type ThsTickerItem,
+  type ThsTickerListData,
+} from './api-ths.types'
+import { HistoricalKlineQueryDto } from './dto/historical-kline.dto'
 import { TickerListQueryDto } from './dto/ticker-list.dto'
 
 /**
@@ -110,7 +119,7 @@ export class ApiThsService {
    * 需要全量时用 `getAllTickers()`，它按上游约定自动翻页。
    */
   async getTickerList(dto: TickerListQueryDto = {}): Promise<ThsTickerItem[]> {
-    await this.assertValidDto(dto)
+    await this.assertValidDto(dto, TickerListQueryDto)
 
     const data = await this.request<ThsTickerListData>(THS_TICKER_LIST_PATH, {
       asset_type: this.toAssetTypeParam(dto.assetType),
@@ -148,17 +157,53 @@ export class ApiThsService {
   }
 
   /**
+   * 历史 K 线（单只标的）
+   *
+   * 契约见 API_THS_FULL.md「历史 K 线」：接口层强约束**每次请求仅一个 thscode**，
+   * 且 `[start, end]` 窗口跨度不超过 10 年；多标的需分多次请求。
+   */
+  async getHistoricalKline(dto: HistoricalKlineQueryDto): Promise<ThsPriceBar[]> {
+    await this.assertValidDto(dto, HistoricalKlineQueryDto)
+    this.assertKlineWindow(dto)
+
+    const data = await this.request<ThsKlineData>(THS_KLINE_PATH, {
+      thscode: dto.thscode,
+      interval: dto.interval ?? '1d',
+      start: dto.start,
+      end: dto.end,
+      // 刻意与上游默认值（forward 前复权）不同：取原始价格更符合回测与技术分析的预期
+      adjust: dto.adjust ?? 'none',
+    })
+
+    return data.item ?? []
+  }
+
+  /**
    * 服务层入参校验
    *
    * 本模块没有 controller，不经过全局 ValidationPipe，DTO 上的校验装饰器**不会自动生效**，
-   * 因此在服务入口显式触发一次。异常消息传字符串而非数组——数组会被 HttpException
-   * 退化为构造器名（`Bad Request`），服务层调用方读 `err.message` 时拿不到中文。
+   * 因此在服务入口显式触发一次（各接口的 DTO 类经 metatype 传入）。
+   * 异常消息传字符串而非数组——数组会被 HttpException 退化为构造器名（`Bad Request`），
+   * 服务层调用方读 `err.message` 时拿不到中文。
    */
-  private async assertValidDto(dto: TickerListQueryDto): Promise<void> {
-    const errors = await validate(plainToInstance(TickerListQueryDto, dto))
+  private async assertValidDto<T extends object>(dto: T, metatype: new () => T): Promise<void> {
+    const errors = await validate(plainToInstance(metatype, dto))
     const messages = errors.flatMap((err) => Object.values(err.constraints ?? {}))
     if (messages.length > 0) {
       throw new BadRequestException(messages.join('; '))
+    }
+  }
+
+  /** 校验 K 线时间窗口：本地拦截方向相反或明显超限的请求，避免白打一次上游 */
+  private assertKlineWindow(dto: HistoricalKlineQueryDto): void {
+    if (dto.end < dto.start) {
+      throw new BadRequestException('结束时间不能早于起始时间')
+    }
+
+    const windowMs = dto.end - dto.start
+    if (windowMs > THS_KLINE_MAX_WINDOW_MS) {
+      const days = Math.ceil(windowMs / (24 * 60 * 60 * 1000))
+      throw new BadRequestException(`K 线时间窗口不能超过 10 年（当前约 ${days} 天）`)
     }
   }
 
