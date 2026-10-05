@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { hash } from 'bcryptjs'
 import { Repository } from 'typeorm'
+import { ADMIN_USERNAME } from './auth.constants'
 import { Users } from './entities/users.entity'
 
 /**
@@ -28,7 +29,7 @@ export class AuthInitService implements OnModuleInit {
    * 密码: Quant.Admin
    */
   private async createDefaultAdmin() {
-    const username = 'QuantAdmin'
+    const username = ADMIN_USERNAME
 
     // 检查用户是否已存在
     const existingUser = await this.userRepo.findOne({
@@ -49,7 +50,7 @@ export class AuthInitService implements OnModuleInit {
     await this.userRepo.save(user)
 
     this.logger.log('默认管理员账户创建成功')
-    this.logger.log('用户名: QuantAdmin')
+    this.logger.log(`用户名: ${ADMIN_USERNAME}`)
     this.logger.log('密码: Quant.Admin')
     this.logger.warn('请在生产环境及时修改默认密码！')
   }

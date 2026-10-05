@@ -13,6 +13,7 @@ import { QueryFailedError, Repository } from 'typeorm'
 import { CONFIG_MODULES } from '../config/constants'
 import { IGlobalConfig } from '../config/global.config'
 import { RedisService } from '../database/redis.service'
+import { ADMIN_ACCESS_EXPIRES_IN, ADMIN_USERNAME } from './auth.constants'
 import { DeviceInfo, JwtPayload, TokenResult } from './auth.types'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
@@ -229,12 +230,16 @@ export class AuthService {
   /** 签发双 token；access 无状态（无 jti），refresh 携带 jti 作为会话吊销依据；双密钥各自签名 */
   private async generateTokens(user: Users): Promise<TokenResult & { jti: string }> {
     const jti = randomUUID()
+    // 内置超级管理员用固定 24 小时，普通用户走 JWT_ACCESS_EXPIRES_IN 配置
+    const accessExpiresIn =
+      user.username === ADMIN_USERNAME ? ADMIN_ACCESS_EXPIRES_IN : this.globalConfig.accessExpiresIn
+
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
         { sub: user.id, username: user.username, tokenType: 'access' },
         {
           secret: this.globalConfig.accessSecretKey,
-          expiresIn: this.globalConfig.accessExpiresIn,
+          expiresIn: accessExpiresIn,
         }
       ),
       this.jwtService.signAsync(

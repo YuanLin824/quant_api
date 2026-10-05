@@ -306,5 +306,23 @@ describe('AuthService', () => {
       expect(refreshCall?.[1]?.secret).toBe('refresh-secret')
       expect(accessCall?.[1]?.secret).not.toBe(refreshCall?.[1]?.secret)
     })
+
+    it('内置管理员 QuantAdmin 的 access token 用 24 小时，普通用户走配置值', async () => {
+      mockJwt.signAsync.mockImplementation(async (payload) => JSON.stringify(payload))
+
+      /** 取最近一次签发的 access token 的 expiresIn */
+      const accessExpiresIn = () => {
+        const calls = mockJwt.signAsync.mock.calls as [unknown, { expiresIn?: number }][]
+        const accessCall = calls.find((call) => (call[0] as JwtPayload).tokenType === 'access')
+        return accessCall?.[1]?.expiresIn
+      }
+
+      await service.register({ username: 'QuantAdmin', password: 'secret123' })
+      expect(accessExpiresIn()).toBe(24 * 60 * 60)
+
+      mockJwt.signAsync.mockClear()
+      await service.register({ username: 'alice123', password: 'secret123' })
+      expect(accessExpiresIn()).toBe(900) // 即测试配置里的 JWT_ACCESS_EXPIRES_IN
+    })
   })
 })
