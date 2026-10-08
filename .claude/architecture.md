@@ -9,9 +9,12 @@
 - **StockSymbolsModule** (`src/stock-symbols/`) — 股票标的（代码表）服务；
   每交易日 17:30 从同花顺同步个股与指数/板块并 upsert 落库（表 `stock_symbols`），
   同时对外提供分页查询、同步状态概要、手动触发同步三个接口（均需登录）
-- **数据源模块** (`src/api-*/`) — 四个外部行情数据源接入，均为纯服务层（无 controller）：
-  `ApiThsModule`（同花顺，契约见 `API_THS.md`）已实现「标的列表获取」与「历史 K 线」，并收口通用请求层（鉴权 / 超时 / 信封解包 / 错误码映射）；
-  其余三个（`ApiTencentModule` / `ApiTdxModule` / `ApiEastMoneyModule`）仍为空骨架，契约见 `API_TENCENT.md` / `API_TDX.md` / `API_EAST_MONEY.md`
+- **StockTradingDaysModule** (`src/stock-trading-days/`) — 交易日历服务；
+  每天凌晨 3 点从同花顺同步近一年交易日并 upsert 落库（表 `trading_days`），
+  同时对外提供手动触发同步的接口（需登录）
+- **ApiThsModule** (`src/api-ths/`) — 同花顺数据源接入，纯服务层（无 controller），契约见 `API_THS.md`；
+  已实现「标的列表获取」「历史 K 线」「交易日历」，并收口通用请求层（鉴权 / 超时 / 信封解包 / 错误码映射）
+- **ApiTdxModule** (`src/api-tdx/`) — 通达信数据源接入，纯服务层（无 controller），当前为空骨架
 - **Common** (`src/common/`) — 跨模块共享件：`BaseEntity` 实体基类、全局异常过滤器、请求日志中间件
 - **Config** (`src/config/`) — 配置集中管理：`ENV_KEYS` 常量、`registerAs` 命名空间配置、Winston 日志器
 - **PostgresModule** (`src/database/postgres.module.ts`) — TypeORM 数据源配置
@@ -45,6 +48,7 @@
    - **`THS_API_KEY` 缺失不阻塞启动**：与 Redis / JWT 的 fail-fast 相反，缺 Key 只在发起请求时抛 503。同花顺是可选外部数据源，不应因未配置就阻止「本地只调认证接口」或「CI 无密钥跑测试」
    - **不做自动重试、翻页串行**：契约明确要求限流（HTTP 429 / `code=4001`）时避免立即连续重试；`getAllTickers()` 因此串行翻页，并设轮数上限兜底防上游行为异常导致死循环
    - **服务层自带入参校验**：本模块没有 controller，不经全局 ValidationPipe，DTO 上的校验装饰器**不会自动生效**——故由 `assertValidDto()` 在服务入口用 `validate()` 显式触发。异常消息传字符串而非数组，否则 `HttpException` 会把数组消息退化成构造器名（`Bad Request`）
+   - **交易日历带 6 小时内存缓存**：该接口无入参、固定返回「近一年」窗口，一天最多变一次，不必每次判断都打上游；缓存**只在结果非空时写入**，避免上游异常把「空日历」缓存住。上层的 `isTradingDay()` / `getPrevTradingDay()` 均按 Asia/Shanghai 自然日判断，与传入时刻的钟点无关
 
 9. **标的代码表同步（stock-symbols）**: 定时（每交易日 17:30）同步同花顺的 `a-share` + `a-share-index` 并落库。
    采用**增量 upsert**（`conflictPaths: ['thscode']`，行的 `id` 跨轮次保持稳定），上游本轮未返回的标的**不删除**，
@@ -54,6 +58,11 @@
    - **网络在事务外 + upsert 按 1000 行分片**：一次 sweep 最坏几十秒，进事务会长期占用连接池；全量约 7000 行 × 9 列会逼近 PostgreSQL 的 65535 绑定参数上限（`EntityManager.upsert` **不自动分片**）
    - **两道上游异常护栏**：返回空列表时跳过写入；返回量不足存量活跃数一半时只写入、不标记——都为防止把大批正常标的误判为退市
    - **重入返回 `skipped` 而非抛异常**：防重入标志由定时任务、启动补齐、手动接口三方共用；返回 `skipped` 让手动接口能回「已有同步正在进行中」（HTTP 200）而不是向调用方抛 409
+
+10. **交易日历同步（stock-trading-days）**: 与标的代码表同范式（定时 + 启动补齐 + 防重入），但本表是**追加型**数据：
+    - **不做「标记消失」**：上游每次只返回近一年窗口，本表保留全部历史——窗口滑动不该删除更早的交易日，实体因此也不需要 `delistedAt` 那类失效标记
+    - **主键用 `date`（yyyyMMdd）**：与 `thscode` 同理，天然唯一且稳定，让 upsert 的冲突键与主键合一
+    - **窗口右边界是「今日」**：日历只有过去、没有未来，所以「上一交易日」可算、「下一交易日」不能算
 
 > `@nestjs/schedule` 锁定在 **6.x**：12.x 起该包 ESM-only，与本项目 CJS 体系冲突，详见 `development.md` 的定时任务章节。
 

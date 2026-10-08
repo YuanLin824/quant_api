@@ -22,6 +22,22 @@ export interface ThsTickerListData {
   item: ThsTickerItem[]
 }
 
+/** 交易日历接口的 data 载荷 */
+export interface ThsTradingDaysData {
+  /** 数据就绪时间（毫秒） */
+  timestamp: number
+  /** 交易日列表，按时间升序 */
+  item: ThsTradingDay[]
+}
+
+/** 单个交易日 */
+export interface ThsTradingDay {
+  /** 该交易日 Asia/Shanghai 00:00:00 的毫秒戳 */
+  date_ms: number
+  /** 同一交易日的 `yyyyMMdd` 格式（Asia/Shanghai），可直接比较与展示 */
+  date: string
+}
+
 /** 历史 K 线接口的 data 载荷 */
 export interface ThsKlineData {
   /** 数据就绪时间（毫秒），为序列中最新一根 K 线的上游有效时间 */

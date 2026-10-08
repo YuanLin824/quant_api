@@ -10,6 +10,17 @@ export const THS_TICKER_LIST_PATH = '/api/meta/tickers/list'
 /** 历史 K 线端点路径 */
 export const THS_KLINE_PATH = '/api/a-share/prices/historical'
 
+/** 交易日历端点路径（无入参，固定返回近一年） */
+export const THS_TRADING_DAYS_PATH = '/api/a-share/calendar/trading-days'
+
+/**
+ * 交易日历的内存缓存时长（毫秒）
+ *
+ * 该接口无入参、固定返回「今日 - 1 年 ~ 今日」的窗口，一天最多变一次，非常适合缓存——
+ * 否则每次判断「今天是不是交易日」都要打一次上游。
+ */
+export const THS_CALENDAR_CACHE_TTL_MS = 6 * 60 * 60 * 1000
+
 /** K 线周期（上游当前仅支持日线） */
 export const THS_KLINE_INTERVALS = ['1d'] as const
 

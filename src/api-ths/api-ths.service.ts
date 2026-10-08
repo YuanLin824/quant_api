@@ -15,6 +15,7 @@ import { CONFIG_MODULES, ENV_KEYS } from '../config/constants'
 import { type IThsConfig } from './api-ths.config'
 import {
   THS_BASE_URL,
+  THS_CALENDAR_CACHE_TTL_MS,
   THS_CODE,
   THS_KLINE_MAX_WINDOW_MS,
   THS_KLINE_PATH,
@@ -23,6 +24,7 @@ import {
   THS_TICKER_LIST_PATH,
   THS_TICKER_SWEEP_MAX_PAGES,
   THS_TICKER_SWEEP_PAGE_SIZE,
+  THS_TRADING_DAYS_PATH,
   type ThsAssetType,
 } from './api-ths.constants'
 import {
@@ -31,6 +33,8 @@ import {
   type ThsPriceBar,
   type ThsTickerItem,
   type ThsTickerListData,
+  type ThsTradingDay,
+  type ThsTradingDaysData,
 } from './api-ths.types'
 import { HistoricalKlineQueryDto } from './dto/historical-kline.dto'
 import { TickerListQueryDto } from './dto/ticker-list.dto'
@@ -108,6 +112,9 @@ export class ApiThsService {
   private readonly logger = new Logger(ApiThsService.name)
   private readonly config: IThsConfig
 
+  /** 交易日历内存缓存（详见 getTradingDays） */
+  private calendarCache: { items: ThsTradingDay[]; expiresAt: number } | null = null
+
   constructor(configService: ConfigService) {
     this.config = configService.get<IThsConfig>(CONFIG_MODULES.THS)!
   }
@@ -179,6 +186,59 @@ export class ApiThsService {
   }
 
   /**
+   * 交易日历（近一年）
+   *
+   * 契约见 API_THS_FULL.md「交易日历」：接口**无入参**，固定返回 `[今日 - 1 年, 今日]`
+   * （Asia/Shanghai）的交易日序列，按时间升序。
+   *
+   * 结果带 6 小时内存缓存——窗口一天最多变一次，不必每次判断都打上游。
+   */
+  async getTradingDays(): Promise<ThsTradingDay[]> {
+    const now = Date.now()
+    if (this.calendarCache && this.calendarCache.expiresAt > now) {
+      return this.calendarCache.items
+    }
+
+    const data = await this.request<ThsTradingDaysData>(THS_TRADING_DAYS_PATH, {})
+    const items = data.item ?? []
+
+    // 仅在非空时写缓存：上游异常返回空列表时，不能把「近期没有交易日」缓存 6 小时
+    if (items.length > 0) {
+      this.calendarCache = { items, expiresAt: now + THS_CALENDAR_CACHE_TTL_MS }
+    }
+
+    return items
+  }
+
+  /**
+   * 判断指定时间是否落在交易日内（默认当前时刻）
+   *
+   * 按 Asia/Shanghai **自然日**判断，传入时刻的具体钟点不影响结果。
+   */
+  async isTradingDay(date: Date = new Date()): Promise<boolean> {
+    const days = await this.getTradingDays()
+    const key = this.toShanghaiDateKey(date)
+    return days.some((day) => day.date === key)
+  }
+
+  /**
+   * 取指定时间之前最近的交易日（默认当前时刻，**不含当日**）
+   *
+   * 常用于「前一交易日」类计算（如超短线策略里取昨日 K 线）。
+   * 若日历窗口内没有更早的交易日（如传入日期早于窗口左边界），返回 null。
+   */
+  async getPrevTradingDay(date: Date = new Date()): Promise<ThsTradingDay | null> {
+    const days = await this.getTradingDays()
+    const key = this.toShanghaiDateKey(date)
+
+    // 列表按时间升序，且 yyyyMMdd 的字典序即时间序，故从后往前找第一个更早的
+    for (let i = days.length - 1; i >= 0; i--) {
+      if (days[i].date < key) return days[i]
+    }
+    return null
+  }
+
+  /**
    * 服务层入参校验
    *
    * 本模块没有 controller，不经过全局 ValidationPipe，DTO 上的校验装饰器**不会自动生效**，
@@ -205,6 +265,13 @@ export class ApiThsService {
       const days = Math.ceil(windowMs / (24 * 60 * 60 * 1000))
       throw new BadRequestException(`K 线时间窗口不能超过 10 年（当前约 ${days} 天）`)
     }
+  }
+
+  /** 把时间转成 Asia/Shanghai 的 `yyyyMMdd`（与日历条目的 date 同格式，可直接比较） */
+  private toShanghaiDateKey(date: Date): string {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai' })
+      .format(date)
+      .replace(/-/g, '')
   }
 
   /** 把资产类型入参拼成上游要求的逗号分隔格式（去重、去空；省略时返回 undefined 表示不过滤） */

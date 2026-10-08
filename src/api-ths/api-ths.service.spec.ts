@@ -10,7 +10,7 @@ import {
 import { ConfigService } from '@nestjs/config'
 import { THS_TICKER_SWEEP_PAGE_SIZE } from './api-ths.constants'
 import { ApiThsService } from './api-ths.service'
-import type { ThsPriceBar, ThsTickerItem } from './api-ths.types'
+import type { ThsPriceBar, ThsTickerItem, ThsTradingDay } from './api-ths.types'
 import type { HistoricalKlineQueryDto } from './dto/historical-kline.dto'
 import type { TickerListQueryDto } from './dto/ticker-list.dto'
 
@@ -41,6 +41,11 @@ function makeBars(n: number): ThsPriceBar[] {
     volume: 1_000_000 + i,
     turnover: 1_600_000_000 + i,
   }))
+}
+
+/** 生成交易日序列（date 为 yyyyMMdd，测试只依赖它做判断） */
+function makeDays(dates: string[]): ThsTradingDay[] {
+  return dates.map((date) => ({ date, date_ms: 0 }))
 }
 
 /** 构造成功响应（HTTP 200 + code=0）；data 结构按接口而定 */
@@ -260,6 +265,91 @@ describe('ApiThsService', () => {
         service.getHistoricalKline({ thscode: '600519.SH', start: 0, end: elevenYears })
       ).rejects.toThrow('K 线时间窗口不能超过 10 年')
       expect(fetchSpy).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('getTradingDays（交易日历）', () => {
+    it('无入参请求该端点，返回交易日序列', async () => {
+      fetchSpy.mockResolvedValue(okResponse({ timestamp: 1, item: makeDays(['20261008']) }))
+
+      const days = await service.getTradingDays()
+
+      expect(days).toHaveLength(1)
+      const url = calledUrl()
+      expect(url.origin + url.pathname).toBe(
+        'https://fuyao.aicubes.cn/api/a-share/calendar/trading-days'
+      )
+      expect(url.search).toBe('') // 该接口无任何查询参数
+    })
+
+    it('命中缓存时不重复请求上游', async () => {
+      fetchSpy.mockResolvedValue(okResponse({ timestamp: 1, item: makeDays(['20261008']) }))
+
+      await service.getTradingDays()
+      await service.getTradingDays()
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it('上游返回空列表时不写缓存（避免把异常结果缓存 6 小时）', async () => {
+      fetchSpy.mockResolvedValue(okResponse({ timestamp: 1, item: [] }))
+
+      await service.getTradingDays()
+      await service.getTradingDays()
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('缓存过期后重新请求上游', async () => {
+      const nowSpy = jest.spyOn(Date, 'now')
+      fetchSpy.mockResolvedValue(okResponse({ timestamp: 1, item: makeDays(['20261008']) }))
+
+      nowSpy.mockReturnValue(1_000_000)
+      await service.getTradingDays()
+
+      nowSpy.mockReturnValue(1_000_000 + 6 * 60 * 60 * 1000 + 1) // 刚越过 TTL
+      await service.getTradingDays()
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+      nowSpy.mockRestore()
+    })
+  })
+
+  describe('isTradingDay / getPrevTradingDay', () => {
+    beforeEach(() => {
+      fetchSpy.mockResolvedValue(
+        okResponse({
+          timestamp: 1,
+          item: makeDays(['20261001', '20261002', '20261008', '20261009']),
+        })
+      )
+    })
+
+    it('交易日返回 true，非交易日返回 false', async () => {
+      expect(await service.isTradingDay(new Date('2026-10-08T10:00:00+08:00'))).toBe(true)
+      expect(await service.isTradingDay(new Date('2026-10-03T10:00:00+08:00'))).toBe(false)
+    })
+
+    it('取指定日期之前最近的交易日（不含当日）', async () => {
+      const prev = await service.getPrevTradingDay(new Date('2026-10-08T10:00:00+08:00'))
+
+      expect(prev?.date).toBe('20261002')
+    })
+
+    it('窗口内没有更早的交易日时返回 null', async () => {
+      const prev = await service.getPrevTradingDay(new Date('2026-10-01T10:00:00+08:00'))
+
+      expect(prev).toBeNull()
+    })
+
+    it('按北京自然日判断，钟点不影响结果', async () => {
+      expect(await service.isTradingDay(new Date('2026-10-08T00:30:00+08:00'))).toBe(true)
+      expect(await service.isTradingDay(new Date('2026-10-08T23:30:00+08:00'))).toBe(true)
+    })
+
+    it('跨时区输入按北京时间归属', async () => {
+      // UTC 2026-10-07 17:00 = 北京 2026-10-08 01:00，应判为交易日
+      expect(await service.isTradingDay(new Date('2026-10-07T17:00:00Z'))).toBe(true)
     })
   })
 

@@ -60,9 +60,10 @@ pg_dump --schema-only -t stock_symbols "$PG_URL" > stock_symbols.sql
 
 `ScheduleModule.forRoot()` 已在 `AppModule` 注册，当前有 1 个任务：
 
-| 任务           | 位置                              | 时间                                | 说明                                      |
-| -------------- | --------------------------------- | ----------------------------------- | ----------------------------------------- |
-| 标的代码表同步 | `StockSymbolsSchedule.handleSync` | 每周一至周五 17:30（Asia/Shanghai） | 从同花顺拉取个股与指数/板块并 upsert 落库 |
+| 任务           | 位置                                  | 时间                                | 说明                                      |
+| -------------- | ------------------------------------- | ----------------------------------- | ----------------------------------------- |
+| 标的代码表同步 | `StockSymbolsSchedule.handleSync`     | 每周一至周五 17:30（Asia/Shanghai） | 从同花顺拉取个股与指数/板块并 upsert 落库 |
+| 交易日历同步   | `StockTradingDaysSchedule.handleSync` | 每天凌晨 3:00（Asia/Shanghai）      | 从同花顺拉取近一年交易日并 upsert 落库    |
 
 > **约定**：定时任务写在模块的 `模块.schedule.ts` 中（只负责触发时机与异常收口），
 > 业务实现留在 `模块.service.ts`，两者分离以便单测与手动调用。
@@ -113,7 +114,8 @@ pg_dump --schema-only -t stock_symbols "$PG_URL" > stock_symbols.sql
 - `docs/api-health.md` — 健康检查接口
 - `docs/api-auth.md` — 认证接口（注册、登录、刷新、登出、用户信息、修改密码、登出所有设备）
 - `docs/api-config.md` — 系统配置（认证机制、环境变量、开发环境）
-- `docs/api-symbols.md` — 标的代码表（分页查询、手动触发同步）
+- `docs/api-symbols.md` — 标的代码表（分页查询、同步状态概要、手动触发同步）
+- `docs/api-stock-trading-days.md` — 交易日历（手动触发同步）
 
 > `docs/api-*.md` 的文档顶部有返回 `API.md` 的导航链接。
 > 接口有变动时需同步更新对应文档（见 `CLAUDE.md` 代码规范）。

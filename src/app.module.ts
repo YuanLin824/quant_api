@@ -4,9 +4,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core'
 import { ScheduleModule } from '@nestjs/schedule'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { resolve } from 'path'
-import { ApiEastMoneyModule } from './api-east-money/api-east-money.module'
 import { ApiTdxModule } from './api-tdx/api-tdx.module'
-import { ApiTencentModule } from './api-tencent/api-tencent.module'
 import { ApiThsModule } from './api-ths/api-ths.module'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
@@ -19,6 +17,7 @@ import { PostgresModule } from './database/postgres.module'
 import { RedisModule } from './database/redis.module'
 import { RedisService } from './database/redis.service'
 import { StockSymbolsModule } from './stock-symbols/stock-symbols.module'
+import { StockTradingDaysModule } from './stock-trading-days/stock-trading-days.module'
 
 // @Global() 使本模块的 providers/exports 在所有子模块中可直接注入，无需重复 import
 @Global()
@@ -56,9 +55,8 @@ import { StockSymbolsModule } from './stock-symbols/stock-symbols.module'
     RedisModule,
     AuthModule,
     StockSymbolsModule,
-    ApiEastMoneyModule,
+    StockTradingDaysModule,
     ApiTdxModule,
-    ApiTencentModule,
     ApiThsModule,
   ],
 

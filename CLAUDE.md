@@ -59,6 +59,3 @@ npm run commit             # czg 交互式生成符合 commitlint 规范的提�
 | [开发流程](./.claude/development.md)  | 启动服务、默认账户、文档结构                                     |
 | [API 文档](./API.md)                  | 基础信息、认证与限流、错误码；拆分到 `docs/api-*.md`             |
 | [同花顺数据源](./API_THS.md)          | A 股行情 / 财务 / 特色数据接口契约；完整聚合见 `API_THS_FULL.md` |
-| [腾讯数据源](./API_TENCENT.md)        | 实时行情 / 盘口 / K 线 / 板块排名等公开接口契约                  |
-| [通达信数据源](./API_TDX.md)          | 契约文档待补全（当前为空文件）                                   |
-| [东方财富数据源](./API_EAST_MONEY.md) | 契约文档待补全（当前为空文件）                                   |
