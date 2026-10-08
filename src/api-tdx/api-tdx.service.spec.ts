@@ -7,9 +7,17 @@ import {
 import type { TdxClient } from 'node-tdx-market'
 import { ApiTdxService } from './api-tdx.service'
 
-/** 构造上游分时点（价格单位：厘，1299520 厘 = 1299.52 元） */
-function makeItem(price = 1299520, avgPrice = 1298000) {
-  return { time: '0931', price, avgPrice, volume: 100 }
+/** 构造上游 K 线（价格单位：厘，1299520 厘 = 1299.52 元） */
+function makeBar(close = 1299520) {
+  return {
+    time: new Date('2026-10-08T00:00:00+08:00'),
+    open: 1290880,
+    high: 1305000,
+    low: 1286000,
+    close,
+    volume: 2324759,
+    amount: 3003033719.95,
+  }
 }
 
 describe('ApiTdxService', () => {
@@ -19,8 +27,7 @@ describe('ApiTdxService', () => {
 
   const mockClient = {
     connect: jest.fn(),
-    getMinute: jest.fn(),
-    getHistoryMinute: jest.fn(),
+    getKline: jest.fn(),
     on: jest.fn((event: string, cb: (...args: unknown[]) => void) => {
       ;(listeners[event] ??= []).push(cb)
     }),
@@ -37,22 +44,24 @@ describe('ApiTdxService', () => {
     Logger.overrideLogger(false)
 
     mockClient.connect.mockResolvedValue('1.2.3.4:7709')
-    mockClient.getMinute.mockResolvedValue({ count: 1, items: [makeItem()] })
-    mockClient.getHistoryMinute.mockResolvedValue({ count: 1, items: [makeItem()] })
+    mockClient.getKline.mockResolvedValue({ count: 1, bars: [makeBar()] })
 
     service = new ApiTdxService(mockClient as unknown as TdxClient)
   })
 
   describe('连接管理（懒连接）', () => {
     it('首次调用才建连，后续调用复用连接', async () => {
-      await service.getMinute('600519.SH')
-      await service.getMinute('600519.SH')
+      await service.getKlines({ thscode: '600519.SH' })
+      await service.getKlines({ thscode: '600519.SH' })
 
       expect(mockClient.connect).toHaveBeenCalledTimes(1)
     })
 
     it('并发调用只建连一次（复用同一个 connect Promise）', async () => {
-      await Promise.all([service.getMinute('600519.SH'), service.getMinute('600519.SH')])
+      await Promise.all([
+        service.getKlines({ thscode: '600519.SH' }),
+        service.getKlines({ thscode: '600519.SH' }),
+      ])
 
       expect(mockClient.connect).toHaveBeenCalledTimes(1)
     })
@@ -60,36 +69,70 @@ describe('ApiTdxService', () => {
     it('连接失败 → 503，且下次调用可重试（不永久卡死）', async () => {
       mockClient.connect.mockRejectedValueOnce(new Error('连接超时'))
 
-      await expect(service.getMinute('600519.SH')).rejects.toBeInstanceOf(
+      await expect(service.getKlines({ thscode: '600519.SH' })).rejects.toBeInstanceOf(
         ServiceUnavailableException
       )
 
-      await service.getMinute('600519.SH')
+      await service.getKlines({ thscode: '600519.SH' })
       expect(mockClient.connect).toHaveBeenCalledTimes(2)
     })
 
     it('断线后下次调用重新建连', async () => {
-      await service.getMinute('600519.SH')
+      await service.getKlines({ thscode: '600519.SH' })
 
       emit('disconnected') // 模拟库抛出断线事件
 
-      await service.getMinute('600519.SH')
+      await service.getKlines({ thscode: '600519.SH' })
       expect(mockClient.connect).toHaveBeenCalledTimes(2)
     })
   })
 
-  describe('getMinute（当日分时）', () => {
-    it('把 thscode 转成通达信代码并换算价格为元', async () => {
-      const data = await service.getMinute('600519.SH')
+  describe('getKlines（K 线）', () => {
+    it('把 thscode 转成通达信代码，价格由厘换算为元', async () => {
+      const bars = await service.getKlines({ thscode: '600519.SH' })
 
-      expect(mockClient.getMinute).toHaveBeenCalledWith('sh600519')
-      expect(data.count).toBe(1)
-      expect(data.items[0]).toEqual({
-        time: '0931',
-        price: 1299.52,
-        avgPrice: 1298,
-        volume: 100,
+      expect(mockClient.getKline).toHaveBeenCalledWith({
+        code: 'sh600519',
+        category: 9, // Day
+        start: 0,
+        count: 100,
       })
+      expect(bars).toHaveLength(1)
+      expect(bars[0]).toMatchObject({
+        open: 1290.88,
+        high: 1305,
+        low: 1286,
+        close: 1299.52,
+        volume: 2324759,
+        // 成交额与价格同为「厘」，需换算为元
+        amount: 3003033.71995,
+      })
+      expect(bars[0].time).toBeInstanceOf(Date)
+    })
+
+    it.each([
+      ['1m', 7],
+      ['5m', 0],
+      ['15m', 1],
+      ['30m', 2],
+      ['60m', 3],
+      ['day', 9],
+      ['week', 5],
+      ['month', 6],
+      ['quarter', 10],
+      ['year', 11],
+    ] as const)('周期 %s → 库的枚举值 %i', async (category, expected) => {
+      await service.getKlines({ thscode: '600519.SH', category })
+
+      expect(mockClient.getKline).toHaveBeenCalledWith(
+        expect.objectContaining({ category: expected })
+      )
+    })
+
+    it('显式指定根数时透传给上游', async () => {
+      await service.getKlines({ thscode: '600519.SH', count: 800 })
+
+      expect(mockClient.getKline).toHaveBeenCalledWith(expect.objectContaining({ count: 800 }))
     })
 
     it.each([
@@ -97,44 +140,30 @@ describe('ApiTdxService', () => {
       ['430047.BJ', 'bj430047'],
       ['600519.sh', 'sh600519'], // 后缀大小写不敏感
     ])('%s → %s', async (thscode, expected) => {
-      await service.getMinute(thscode)
+      await service.getKlines({ thscode })
 
-      expect(mockClient.getMinute).toHaveBeenCalledWith(expected)
+      expect(mockClient.getKline).toHaveBeenCalledWith(expect.objectContaining({ code: expected }))
     })
 
     it.each([
-      ['600519', '无效的标的代码'], // 缺交易所后缀
-      ['600519.XX', '不支持的交易所后缀'],
-      ['', '无效的标的代码'],
-    ])('非法代码 %s → 400 且不发起连接', async (thscode, message) => {
-      await expect(service.getMinute(thscode)).rejects.toBeInstanceOf(BadRequestException)
-      await expect(service.getMinute(thscode)).rejects.toThrow(message)
+      [{ thscode: '' }, '标的代码不能为空'],
+      [{ thscode: '600519' }, '无效的标的代码'], // 缺交易所后缀
+      [{ thscode: '600519.XX' }, '不支持的交易所后缀'],
+      [{ thscode: '600519.SH', category: '2h' }, 'K 线周期不在支持范围内'],
+      [{ thscode: '600519.SH', count: 0 }, 'K 线根数至少为 1'],
+      [{ thscode: '600519.SH', count: 801 }, 'K 线根数不能超过 800'],
+    ])('入参校验 %j → 400 且不发起连接', async (dto, message) => {
+      await expect(service.getKlines(dto as never)).rejects.toBeInstanceOf(BadRequestException)
+      await expect(service.getKlines(dto as never)).rejects.toThrow(message)
       expect(mockClient.connect).not.toHaveBeenCalled()
     })
 
     it('调用期异常 → 502', async () => {
-      mockClient.getMinute.mockRejectedValue(new Error('socket closed'))
+      mockClient.getKline.mockRejectedValue(new Error('socket closed'))
 
-      await expect(service.getMinute('600519.SH')).rejects.toBeInstanceOf(BadGatewayException)
+      await expect(service.getKlines({ thscode: '600519.SH' })).rejects.toBeInstanceOf(
+        BadGatewayException
+      )
     })
-  })
-
-  describe('getHistoryMinute（历史分时）', () => {
-    it('透传 thscode 与日期', async () => {
-      const data = await service.getHistoryMinute('600519.SH', 20261008)
-
-      expect(mockClient.getHistoryMinute).toHaveBeenCalledWith('sh600519', 20261008)
-      expect(data.items[0].price).toBe(1299.52)
-    })
-
-    it.each([[2026100], [0], [-1], [20261008.5], [NaN]])(
-      '非法日期 %s → 400 且不发起连接',
-      async (date) => {
-        await expect(service.getHistoryMinute('600519.SH', date)).rejects.toBeInstanceOf(
-          BadRequestException
-        )
-        expect(mockClient.connect).not.toHaveBeenCalled()
-      }
-    )
   })
 })

@@ -15,7 +15,7 @@
 - **ApiThsModule** (`src/api-ths/`) — 同花顺数据源接入，纯服务层（无 controller），契约见 `API_THS.md`；
   已实现「标的列表获取」「历史 K 线」「交易日历」，并收口通用请求层（鉴权 / 超时 / 信封解包 / 错误码映射）
 - **ApiTdxModule** (`src/api-tdx/`) — 通达信数据源接入，纯服务层（无 controller），契约见 `API_TDX.md`；
-  基于 `node-tdx-market` 的 **TCP 长连接**（懒连接、断线重连），已实现分时数据（当日 / 历史分时）
+  基于 `node-tdx-market` 的 **TCP 长连接**（懒连接、断线重连），已实现 **K 线**（多周期，含分钟级）
 - **Common** (`src/common/`) — 跨模块共享件：`BaseEntity` 实体基类、全局异常过滤器、请求日志中间件
 - **Config** (`src/config/`) — 配置集中管理：`ENV_KEYS` 常量、`registerAs` 命名空间配置、Winston 日志器
 - **PostgresModule** (`src/database/postgres.module.ts`) — TypeORM 数据源配置
@@ -65,11 +65,13 @@
     - **主键用 `date`（yyyyMMdd）**：与 `thscode` 同理，天然唯一且稳定，让 upsert 的冲突键与主键合一
     - **窗口右边界是「今日」**：日历只有过去、没有未来，所以「上一交易日」可算、「下一交易日」不能算
 
-11. **通达信数据源（api-tdx）**: 基于 `node-tdx-market` 直连通达信公开行情服务器（**TCP 长连接**，非 HTTP，免费零鉴权），是项目里第二个长连接依赖（第一个是 Redis）。
-    - **连接所有权在模块**（与 `RedisModule` 同范式）：工厂创建客户端并挂 `error`/`connected` 监听，`onModuleDestroy` 里断开；但**懒连接的触发在 service**——首次调用才 `connect()` 并缓存 Promise，失败或断线事件时清空以便重连（启动阶段不连接，行情服务器不可用不影响应用启动）
-    - **代码与单位转换在模块内收口**：对外仍是项目的 thscode（`600519.SH`），内部转 `sh600519`；价格由上游的「厘」整数换算为元
-    - ⚠️ **历史分时的均价字段不可靠**：实测上游返回的原始值失真（茅台均价算出 1~3 元），且更早日期可能无数据，已在类型注释中标注
-    - **`main.ts` 已调用 `app.enableShutdownHooks()`**：SIGTERM / SIGINT（容器停止、Ctrl+C）会触发 `onModuleDestroy`，TCP 连接与 Redis 一并优雅释放（此前未启用时它们只在显式 `app.close()` 时才触发）
+11. **`main.ts` 启用了关闭钩子**: `app.enableShutdownHooks()` 让 SIGTERM / SIGINT（容器停止、Ctrl+C）触发 `onModuleDestroy`，使 Redis 等长连接资源优雅释放（未启用时它们只在显式 `app.close()` 时才触发）。
+12. **通达信数据源（api-tdx）**: 基于 `node-tdx-market` 直连通达信公开行情服务器（**TCP 长连接**，非 HTTP，免费零鉴权）。
+    - **连接所有权在模块**（与 `RedisModule` 同范式）：工厂创建客户端并挂 `error`/`connected` 监听，`onModuleDestroy` 里断开；**懒连接的触发在 service**——首次调用才 `connect()` 并缓存 Promise，失败或断线事件时清空以便重连（启动阶段不连接，行情服务器不可用不影响应用启动）
+    - **隔离底层细节**：对外用项目的 thscode（`600519.SH`）与自定义周期枚举（`1m`…`year`），内部才转成库要求的 `sh600519` 与 `KlineCategory`
+    - ⚠️ **周期映射用数值字面量**：库把 `KlineCategory` 声明为 `const enum`，而本项目开启了 `isolatedModules`（会报 TS2748 无法访问 ambient const enum），故映射表直接写数值并注明来源——**升级该依赖时需核对这张表**
+    - **单位换算**：价格与成交额上游都是「厘」（元 × 1000），对外统一换算为元；成交量单位是「手」，已是可读量级故透传
+    - 该源也提供分时数据，但**每分钟只有成交价与量、没有开高低**，且历史分时均价字段上游失真（实测茅台均价算成 1~3 元），故未采用——K 线有标准 OHLC，满足技术分析需求
 
 > `@nestjs/schedule` 锁定在 **6.x**：12.x 起该包 ESM-only，与本项目 CJS 体系冲突，详见 `development.md` 的定时任务章节。
 

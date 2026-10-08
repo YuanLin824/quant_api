@@ -6,12 +6,40 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common'
+import { plainToInstance } from 'class-transformer'
+import { validate } from 'class-validator'
 import { priceToYuan, type TdxClient } from 'node-tdx-market'
-import { TDX_CLIENT, TDX_EXCHANGE_SUFFIXES } from './api-tdx.constants'
-import type { TdxMinuteData } from './api-tdx.types'
+import {
+  TDX_CLIENT,
+  TDX_EXCHANGE_SUFFIXES,
+  TDX_KLINE_DEFAULT_COUNT,
+  type TdxKlineCategory,
+} from './api-tdx.constants'
+import type { TdxKlineBar } from './api-tdx.types'
+import { TdxKlineQueryDto } from './dto/kline-query.dto'
 
-/** 上游分时响应的类型（从客户端方法签名推导，库未在顶层导出 `MinuteItem`） */
-type TdxMinuteResponse = Awaited<ReturnType<TdxClient['getMinute']>>
+/**
+ * 对外周期 → 库的 `KlineCategory` 数值映射
+ *
+ * 这里用**数值字面量**而不是 `KlineCategory.Day` 这类写法：库把该枚举声明为 `const enum`，
+ * 而本项目开启了 `isolatedModules`，TypeScript 不允许访问 ambient const enum（TS2748）。
+ *
+ * 数值取自库的类型定义：`Minute5=0, Minute15=1, Minute30=2, Minute60=3, Week=5,
+ * Month=6, Minute1=7, Day=9, Quarter=10, Year=11`（`Day2=4`、`Minute1Alt=8`
+ * 是语义重复的成员，刻意不用）。升级该依赖时需核对这张表。
+ */
+const KLINE_CATEGORY_MAP: Record<TdxKlineCategory, number> = {
+  '1m': 7, // Minute1
+  '5m': 0, // Minute5
+  '15m': 1, // Minute15
+  '30m': 2, // Minute30
+  '60m': 3, // Minute60
+  day: 9, // Day
+  week: 5, // Week
+  month: 6, // Month
+  quarter: 10, // Quarter
+  year: 11, // Year
+}
 
 /**
  * 通达信行情数据服务
@@ -22,7 +50,8 @@ type TdxMinuteResponse = Awaited<ReturnType<TdxClient['getMinute']>>
  * - **代码格式**：对外仍是项目的 thscode（`600519.SH`），内部转成库要求的 `sh600519`
  * - **价格单位**：上游是「厘」整数（元 × 1000），对外统一换算为元
  *
- * 当前仅实现分时数据（当日 / 历史分时）。
+ * 当前实现 K 线（`getKlines`）——上游提供标准 OHLC 与分钟级周期，
+ * 正好补上分时数据「只有成交价与量、无开高低」的短板。
  */
 @Injectable()
 export class ApiTdxService {
@@ -39,31 +68,38 @@ export class ApiTdxService {
   }
 
   /**
-   * 当日分时
+   * 获取 K 线（最近的 N 根）
    *
-   * 交易时段内为实时序列，收盘后为当日全天；价格已换算为元。
+   * 上游按「从最新往前倒推」取数，故这里只暴露 `count`（根数）而不暴露偏移——
+   * 需要更早的历史时，增大 `count` 后在本地截取即可（单次上限 800 根）。
+   * 价格已换算为元。
    */
-  async getMinute(thscode: string): Promise<TdxMinuteData> {
-    const code = this.toTdxCode(thscode)
+  async getKlines(dto: TdxKlineQueryDto): Promise<TdxKlineBar[]> {
+    await this.assertValidDto(dto, TdxKlineQueryDto)
+
+    const code = this.toTdxCode(dto.thscode)
+    const category = KLINE_CATEGORY_MAP[dto.category ?? 'day']
+    const count = dto.count ?? TDX_KLINE_DEFAULT_COUNT
+
     await this.ensureConnected()
 
-    return this.toMinuteData(() => this.client.getMinute(code), thscode)
-  }
-
-  /**
-   * 历史分时
-   *
-   * ⚠️ 上游对历史分时返回的**均价不可靠**（见 `TdxMinuteTick.avgPrice` 的说明），
-   * 且更早的日期可能直接无数据（实测仅近期若干交易日有值，超出即返回空列表）。
-   *
-   * @param date 交易日，`yyyyMMdd` 格式（如 `20261008`）
-   */
-  async getHistoryMinute(thscode: string, date: number): Promise<TdxMinuteData> {
-    const code = this.toTdxCode(thscode)
-    this.assertDate(date)
-    await this.ensureConnected()
-
-    return this.toMinuteData(() => this.client.getHistoryMinute(code, date), thscode)
+    try {
+      const { bars } = await this.client.getKline({ code, category, start: 0, count })
+      return bars.map((bar) => ({
+        time: bar.time,
+        open: priceToYuan(bar.open),
+        high: priceToYuan(bar.high),
+        low: priceToYuan(bar.low),
+        close: priceToYuan(bar.close),
+        // 成交额与价格同为「厘」（实测茅台日成交额 3260057856000 ÷ 1000 = 32.6 亿元，量级吻合）
+        amount: priceToYuan(bar.amount),
+        // 成交量单位为「手」，上游已是可读量级（实测茅台日成交约 2.6 万手），不做换算
+        volume: bar.volume,
+      }))
+    } catch (err) {
+      this.logger.error({ message: '通达信 K 线获取失败', thscode: dto.thscode, error: err })
+      throw new BadGatewayException('通达信行情获取失败')
+    }
   }
 
   /**
@@ -86,25 +122,18 @@ export class ApiTdxService {
     return this.connectPromise
   }
 
-  /** 调用上游并把价格由厘换算为元；调用期异常统一映射为 502 */
-  private async toMinuteData(
-    fetch: () => Promise<TdxMinuteResponse>,
-    thscode: string
-  ): Promise<TdxMinuteData> {
-    try {
-      const { count, items } = await fetch()
-      return {
-        count,
-        items: items.map((item) => ({
-          time: item.time,
-          price: priceToYuan(item.price),
-          avgPrice: priceToYuan(item.avgPrice),
-          volume: item.volume,
-        })),
-      }
-    } catch (err) {
-      this.logger.error({ message: '通达信分时数据获取失败', thscode, error: err })
-      throw new BadGatewayException('通达信行情获取失败')
+  /**
+   * 服务层入参校验
+   *
+   * 本模块没有 controller，不经过全局 ValidationPipe，DTO 上的校验装饰器**不会自动生效**，
+   * 因此在服务入口显式触发一次。异常消息传字符串而非数组——数组会被 HttpException
+   * 退化为构造器名（`Bad Request`），服务层调用方读 `err.message` 时拿不到中文。
+   */
+  private async assertValidDto<T extends object>(dto: T, metatype: new () => T): Promise<void> {
+    const errors = await validate(plainToInstance(metatype, dto))
+    const messages = errors.flatMap((err) => Object.values(err.constraints ?? {}))
+    if (messages.length > 0) {
+      throw new BadRequestException(messages.join('; '))
     }
   }
 
@@ -127,12 +156,5 @@ export class ApiTdxService {
     }
 
     return `${upper.toLowerCase()}${ticker}`
-  }
-
-  /** 校验历史分时的日期参数（`yyyyMMdd`） */
-  private assertDate(date: number): void {
-    if (!Number.isInteger(date) || date < 19700101 || date > 99991231) {
-      throw new BadRequestException(`无效的日期: ${date}（应为 yyyyMMdd 格式，如 20261008）`)
-    }
   }
 }
