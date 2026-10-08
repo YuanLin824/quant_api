@@ -10,6 +10,7 @@
 - [认证接口](./docs/api-auth.md)
 - [标的代码表](./docs/api-symbols.md)
 - [交易日历](./docs/api-stock-trading-days.md)
+- [股票 K 线](./docs/api-stock-kline.md)
 
 ## 基础信息
 
@@ -26,6 +27,7 @@
 | 认证接口   | `/api/auth`               | 各接口不同，详见[认证接口](./docs/api-auth.md)       | 各接口不同，见该文档            |
 | 标的代码表 | `/api/stock-symbols`      | 是，详见[标的代码表](./docs/api-symbols.md)          | 查询走全局；手动同步每小时 5 次 |
 | 交易日历   | `/api/stock-trading-days` | 是，详见[交易日历](./docs/api-stock-trading-days.md) | 手动同步每小时 5 次             |
+| 股票 K 线  | `/api/stock-kline`        | 是，详见[股票 K 线](./docs/api-stock-kline.md)       | 查询走全局                      |
 
 受保护接口统一通过请求头携带令牌（唯一例外是 `POST /api/auth/refresh`，它携带的是 refresh token）：
 

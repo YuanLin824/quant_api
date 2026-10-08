@@ -10,8 +10,7 @@ import {
 import { ConfigService } from '@nestjs/config'
 import { THS_TICKER_SWEEP_PAGE_SIZE } from './api-ths.constants'
 import { ApiThsService } from './api-ths.service'
-import type { ThsPriceBar, ThsTickerItem, ThsTradingDay } from './api-ths.types'
-import type { HistoricalKlineQueryDto } from './dto/historical-kline.dto'
+import type { ThsTickerItem, ThsTradingDay } from './api-ths.types'
 import type { TickerListQueryDto } from './dto/ticker-list.dto'
 
 /** 生成 n 条标的（内容不重要，只用于验证条数与分页边界） */
@@ -27,19 +26,6 @@ function makeItems(n: number, startIndex = 0): ThsTickerItem[] {
     end_date: null,
     last_trade_date: null,
     last_delivery_date: null,
-  }))
-}
-
-/** 生成 n 根 K 线 */
-function makeBars(n: number): ThsPriceBar[] {
-  return Array.from({ length: n }, (_, i) => ({
-    date_ms: 1716134400000 + i * 86_400_000,
-    open_price: 1600 + i,
-    high_price: 1620 + i,
-    low_price: 1590 + i,
-    close_price: 1610 + i,
-    volume: 1_000_000 + i,
-    turnover: 1_600_000_000 + i,
   }))
 }
 
@@ -194,80 +180,6 @@ describe('ApiThsService', () => {
     })
   })
 
-  describe('getHistoricalKline（历史 K 线）', () => {
-    const baseDto = {
-      thscode: '600519.SH',
-      start: 1716105600000,
-      end: 1747641600000,
-    }
-
-    it('参数透传：未指定时补默认周期与不复权', async () => {
-      fetchSpy.mockResolvedValue(okResponse({ timestamp: 1, item: makeBars(2) }))
-
-      const bars = await service.getHistoricalKline({ ...baseDto })
-
-      expect(bars).toHaveLength(2)
-      const url = calledUrl()
-      expect(url.origin + url.pathname).toBe(
-        'https://fuyao.aicubes.cn/api/a-share/prices/historical'
-      )
-      expect(url.searchParams.get('thscode')).toBe('600519.SH')
-      expect(url.searchParams.get('start')).toBe('1716105600000')
-      expect(url.searchParams.get('end')).toBe('1747641600000')
-      expect(url.searchParams.get('interval')).toBe('1d')
-      expect(url.searchParams.get('adjust')).toBe('none')
-    })
-
-    it('显式指定复权方式时以入参为准', async () => {
-      fetchSpy.mockResolvedValue(okResponse({ timestamp: 1, item: [] }))
-
-      await service.getHistoricalKline({ ...baseDto, adjust: 'forward' })
-
-      expect(calledUrl().searchParams.get('adjust')).toBe('forward')
-    })
-
-    it('上游缺 item 字段时兜底为空数组', async () => {
-      fetchSpy.mockResolvedValue(okResponse({ timestamp: 1 }))
-
-      await expect(service.getHistoricalKline({ ...baseDto })).resolves.toEqual([])
-    })
-
-    it.each([
-      [{ ...baseDto, thscode: '' }, '标的代码不能为空'],
-      [{ ...baseDto, thscode: '600519.SH,000001.SZ' }, '标的代码只能是单只'],
-      [{ ...baseDto, start: undefined }, '起始时间必须是毫秒时间戳'],
-      [{ ...baseDto, end: undefined }, '结束时间必须是毫秒时间戳'],
-      [{ ...baseDto, interval: '1m' }, 'K 线周期不在支持范围内'],
-      [{ ...baseDto, adjust: 'avg' }, '复权方式不在支持范围内'],
-    ])('入参校验 %j → 400 且不发起请求', async (dto, message) => {
-      const query = dto as unknown as HistoricalKlineQueryDto
-
-      await expect(service.getHistoricalKline(query)).rejects.toBeInstanceOf(BadRequestException)
-      await expect(service.getHistoricalKline(query)).rejects.toThrow(message)
-      expect(fetchSpy).not.toHaveBeenCalled()
-    })
-
-    it('窗口方向相反（end < start）→ 400 且不发起请求', async () => {
-      await expect(
-        service.getHistoricalKline({
-          thscode: '600519.SH',
-          start: 1747641600000,
-          end: 1716105600000,
-        })
-      ).rejects.toThrow('结束时间不能早于起始时间')
-      expect(fetchSpy).not.toHaveBeenCalled()
-    })
-
-    it('窗口超过 10 年 → 400 且不发起请求', async () => {
-      const elevenYears = 4000 * 24 * 60 * 60 * 1000
-
-      await expect(
-        service.getHistoricalKline({ thscode: '600519.SH', start: 0, end: elevenYears })
-      ).rejects.toThrow('K 线时间窗口不能超过 10 年')
-      expect(fetchSpy).not.toHaveBeenCalled()
-    })
-  })
-
   describe('getTradingDays（交易日历）', () => {
     it('无入参请求该端点，返回交易日序列', async () => {
       fetchSpy.mockResolvedValue(okResponse({ timestamp: 1, item: makeDays(['20261008']) }))
@@ -312,44 +224,6 @@ describe('ApiThsService', () => {
 
       expect(fetchSpy).toHaveBeenCalledTimes(2)
       nowSpy.mockRestore()
-    })
-  })
-
-  describe('isTradingDay / getPrevTradingDay', () => {
-    beforeEach(() => {
-      fetchSpy.mockResolvedValue(
-        okResponse({
-          timestamp: 1,
-          item: makeDays(['20261001', '20261002', '20261008', '20261009']),
-        })
-      )
-    })
-
-    it('交易日返回 true，非交易日返回 false', async () => {
-      expect(await service.isTradingDay(new Date('2026-10-08T10:00:00+08:00'))).toBe(true)
-      expect(await service.isTradingDay(new Date('2026-10-03T10:00:00+08:00'))).toBe(false)
-    })
-
-    it('取指定日期之前最近的交易日（不含当日）', async () => {
-      const prev = await service.getPrevTradingDay(new Date('2026-10-08T10:00:00+08:00'))
-
-      expect(prev?.date).toBe('20261002')
-    })
-
-    it('窗口内没有更早的交易日时返回 null', async () => {
-      const prev = await service.getPrevTradingDay(new Date('2026-10-01T10:00:00+08:00'))
-
-      expect(prev).toBeNull()
-    })
-
-    it('按北京自然日判断，钟点不影响结果', async () => {
-      expect(await service.isTradingDay(new Date('2026-10-08T00:30:00+08:00'))).toBe(true)
-      expect(await service.isTradingDay(new Date('2026-10-08T23:30:00+08:00'))).toBe(true)
-    })
-
-    it('跨时区输入按北京时间归属', async () => {
-      // UTC 2026-10-07 17:00 = 北京 2026-10-08 01:00，应判为交易日
-      expect(await service.isTradingDay(new Date('2026-10-07T17:00:00Z'))).toBe(true)
     })
   })
 

@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Between, FindOptionsWhere, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm'
+import { Repository } from 'typeorm'
 import { ApiThsService } from '../api-ths/api-ths.service'
 import { StockTradingDay } from './entities/stock-trading-day.entity'
 
@@ -17,7 +17,7 @@ export interface StockTradingDaysSyncResult {
 /**
  * 交易日历服务
  *
- * 从同花顺拉取近一年的 A 股交易日并落库，供其他模块查询。
+ * 从同花顺拉取近一年的 A 股交易日并落库。
  * 与 `StockSymbolsService` 同一范式（定时 + 启动补齐 + 防重入），差异在于本表是**追加型**数据：
  * 同步只 upsert、不做「标记消失」——上游窗口滑动不应删除更早的交易日。
  */
@@ -78,25 +78,6 @@ export class StockTradingDaysService implements OnApplicationBootstrap {
     } finally {
       this.syncing = false
     }
-  }
-
-  /**
-   * 查询交易日，按日期升序返回
-   *
-   * `start` / `end` 为 `yyyyMMdd` 格式（含端点）；省略则不过滤该侧。
-   * 取「前一交易日」之类的计算直接基于结果做区间判断即可，无需再打上游。
-   */
-  async listStockTradingDays(start?: string, end?: string): Promise<StockTradingDay[]> {
-    const where: FindOptionsWhere<StockTradingDay> = {}
-    if (start && end) {
-      where.date = Between(start, end)
-    } else if (start) {
-      where.date = MoreThanOrEqual(start)
-    } else if (end) {
-      where.date = LessThanOrEqual(end)
-    }
-
-    return this.tradingDayRepo.find({ where, order: { date: 'ASC' } })
   }
 
   /** 表为空时补齐（仅在首次部署时命中） */

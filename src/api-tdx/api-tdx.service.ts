@@ -68,10 +68,10 @@ export class ApiTdxService {
   }
 
   /**
-   * 获取 K 线（最近的 N 根）
+   * 获取 K 线（自偏移起的 N 根）
    *
-   * 上游按「从最新往前倒推」取数，故这里只暴露 `count`（根数）而不暴露偏移——
-   * 需要更早的历史时，增大 `count` 后在本地截取即可（单次上限 800 根）。
+   * 上游按「从最新往前倒推」取数：`start` 为跳过的根数（0 = 最新，默认），
+   * `count` 为根数（单次上限 800）——取更早的历史时用「偏移 + 取数」翻窗口即可。
    * 价格已换算为元。
    */
   async getKlines(dto: TdxKlineQueryDto): Promise<TdxKlineBar[]> {
@@ -79,12 +79,13 @@ export class ApiTdxService {
 
     const code = this.toTdxCode(dto.thscode)
     const category = KLINE_CATEGORY_MAP[dto.category ?? 'day']
+    const start = dto.start ?? 0
     const count = dto.count ?? TDX_KLINE_DEFAULT_COUNT
 
     await this.ensureConnected()
 
     try {
-      const { bars } = await this.client.getKline({ code, category, start: 0, count })
+      const { bars } = await this.client.getKline({ code, category, start, count })
       return bars.map((bar) => ({
         time: bar.time,
         open: priceToYuan(bar.open),

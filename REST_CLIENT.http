@@ -89,3 +89,9 @@ Authorization: Bearer {{login.response.body.data.accessToken}}
 # 真实调用上游同花顺；每小时最多 5 次
 POST {{baseUrl}}/stock-trading-days/sync
 Authorization: Bearer {{login.response.body.data.accessToken}}
+
+
+### 查询股票 K 线
+# category 可选 day/1m/5m/15m/30m/60m（默认 day）；start/end 为 yyyyMMdd（含端点）
+GET {{baseUrl}}/stock-kline?thscode=600519.SH&category=day&start=20260101&end=20261231
+Authorization: Bearer {{login.response.body.data.accessToken}}

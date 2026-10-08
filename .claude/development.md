@@ -58,12 +58,14 @@ pg_dump --schema-only -t stock_symbols "$PG_URL" > stock_symbols.sql
 
 ## 定时任务
 
-`ScheduleModule.forRoot()` 已在 `AppModule` 注册，当前有 1 个任务：
+`ScheduleModule.forRoot()` 已在 `AppModule` 注册，当前有 4 个任务：
 
-| 任务           | 位置                                  | 时间                                | 说明                                      |
-| -------------- | ------------------------------------- | ----------------------------------- | ----------------------------------------- |
-| 标的代码表同步 | `StockSymbolsSchedule.handleSync`     | 每周一至周五 17:30（Asia/Shanghai） | 从同花顺拉取个股与指数/板块并 upsert 落库 |
-| 交易日历同步   | `StockTradingDaysSchedule.handleSync` | 每天凌晨 3:00（Asia/Shanghai）      | 从同花顺拉取近一年交易日并 upsert 落库    |
+| 任务           | 位置                                  | 时间                                | 说明                                                         |
+| -------------- | ------------------------------------- | ----------------------------------- | ------------------------------------------------------------ |
+| 标的代码表同步 | `StockSymbolsSchedule.handleSync`     | 每周一至周五 17:30（Asia/Shanghai） | 从同花顺拉取个股与指数/板块并 upsert 落库                    |
+| 交易日历同步   | `StockTradingDaysSchedule.handleSync` | 每天凌晨 3:00（Asia/Shanghai）      | 从同花顺拉取近一年交易日并 upsert 落库                       |
+| 日 K 同步      | `StockKlineSchedule.handleDailySync`  | 每周一至周五 17:45（Asia/Shanghai） | 全市场 A 股日 K 回补/自适应增量（通达信逐只，一轮 3~5 分钟） |
+| 分钟 K 同步    | `StockKlineSchedule.handleMinuteSync` | 每周一至周五 19:00（Asia/Shanghai） | 全市场分钟 K 五周期整窗重取并清理超窗（通达信逐只）          |
 
 > **约定**：定时任务写在模块的 `模块.schedule.ts` 中（只负责触发时机与异常收口），
 > 业务实现留在 `模块.service.ts`，两者分离以便单测与手动调用。
@@ -80,6 +82,11 @@ pg_dump --schema-only -t stock_symbols "$PG_URL" > stock_symbols.sql
 > ⚠️ **e2e 测试的副作用**：`test/app.e2e-spec.ts` 跑的是完整 `AppModule` 与真实数据库。
 > 若库里 `stock_symbols` 为空且 `.env` 配了 `THS_API_KEY`，启动补齐会**真的打同花顺**并写入数据。
 > 需要隔离时，先给测试库预置任意一行标的即可跳过补齐（判据是 `repo.count() > 0`）。
+>
+> 同理，`stock_kline` 为空时会触发**全市场 K 线同步**——分钟回补以十分钟计，
+> 切勿在测试/开发库里空表启动；预置任意一行 K 线数据即可跳过。
+> 本机长期挂着 `start:dev`（watch 模式）时尤其要注意：每次源码改动触发重启，
+> 空表都会重新发起一轮全市场同步（`StockKlineService` 的两个 `fillIfEmpty`）。
 
 ## 测试
 
@@ -103,7 +110,7 @@ pg_dump --schema-only -t stock_symbols "$PG_URL" > stock_symbols.sql
 
 ## 接口调试
 
-- `REST_CLIENT.http` — VS Code REST Client 可直接执行的接口集合，覆盖健康检查、认证与标的代码表接口
+- `REST_CLIENT.http` — VS Code REST Client 可直接执行的接口集合，覆盖健康检查、认证、标的代码表、交易日历与 K 线接口
 - 该文件可直接复用登录接口返回的 `accessToken`（通过 `{{login.response.body.data.accessToken}}` 变量引用）
 
 ## 文档结构
@@ -116,6 +123,7 @@ pg_dump --schema-only -t stock_symbols "$PG_URL" > stock_symbols.sql
 - `docs/api-config.md` — 系统配置（认证机制、环境变量、开发环境）
 - `docs/api-symbols.md` — 标的代码表（分页查询、同步状态概要、手动触发同步）
 - `docs/api-stock-trading-days.md` — 交易日历（手动触发同步）
+- `docs/api-stock-kline.md` — 股票 K 线（日 K / 分钟 K 分页查询）
 
 > `docs/api-*.md` 的文档顶部有返回 `API.md` 的导航链接。
 > 接口有变动时需同步更新对应文档（见 `CLAUDE.md` 代码规范）。

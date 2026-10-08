@@ -23,7 +23,14 @@ export class TdxKlineQueryDto {
   @IsIn(TDX_KLINE_CATEGORIES, { message: 'K 线周期不在支持范围内' })
   category?: TdxKlineCategory
 
-  /** 取最近的 N 根（默认 100，上限 800） */
+  /** 偏移：从最新一根往前跳过的根数（默认 0 = 最新；配合 count 可取更早的历史） */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'K 线偏移必须是整数' })
+  @Min(0, { message: 'K 线偏移不能为负数' })
+  start?: number
+
+  /** 取最近（或偏移起点后）的 N 根（默认 100，上限 800） */
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'K 线根数必须是整数' })

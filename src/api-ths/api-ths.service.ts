@@ -17,8 +17,6 @@ import {
   THS_BASE_URL,
   THS_CALENDAR_CACHE_TTL_MS,
   THS_CODE,
-  THS_KLINE_MAX_WINDOW_MS,
-  THS_KLINE_PATH,
   THS_REQUEST_TIMEOUT_MS,
   THS_TICKER_LIST_DEFAULT_LIMIT,
   THS_TICKER_LIST_PATH,
@@ -29,14 +27,11 @@ import {
 } from './api-ths.constants'
 import {
   type ThsApiEnvelope,
-  type ThsKlineData,
-  type ThsPriceBar,
   type ThsTickerItem,
   type ThsTickerListData,
   type ThsTradingDay,
   type ThsTradingDaysData,
 } from './api-ths.types'
-import { HistoricalKlineQueryDto } from './dto/historical-kline.dto'
 import { TickerListQueryDto } from './dto/ticker-list.dto'
 
 /**
@@ -168,28 +163,6 @@ export class ApiThsService {
   }
 
   /**
-   * 历史 K 线（单只标的）
-   *
-   * 契约见 API_THS_FULL.md「历史 K 线」：接口层强约束**每次请求仅一个 thscode**，
-   * 且 `[start, end]` 窗口跨度不超过 10 年；多标的需分多次请求。
-   */
-  async getHistoricalKline(dto: HistoricalKlineQueryDto): Promise<ThsPriceBar[]> {
-    await this.assertValidDto(dto, HistoricalKlineQueryDto)
-    this.assertKlineWindow(dto)
-
-    const data = await this.request<ThsKlineData>(THS_KLINE_PATH, {
-      thscode: dto.thscode,
-      interval: dto.interval ?? '1d',
-      start: dto.start,
-      end: dto.end,
-      // 刻意与上游默认值（forward 前复权）不同：取原始价格更符合回测与技术分析的预期
-      adjust: dto.adjust ?? 'none',
-    })
-
-    return data.item ?? []
-  }
-
-  /**
    * 交易日历（近一年）
    *
    * 契约见 API_THS_FULL.md「交易日历」：接口**无入参**，固定返回 `[今日 - 1 年, 今日]`
@@ -215,34 +188,6 @@ export class ApiThsService {
   }
 
   /**
-   * 判断指定时间是否落在交易日内（默认当前时刻）
-   *
-   * 按 Asia/Shanghai **自然日**判断，传入时刻的具体钟点不影响结果。
-   */
-  async isTradingDay(date: Date = new Date()): Promise<boolean> {
-    const days = await this.getTradingDays()
-    const key = this.toShanghaiDateKey(date)
-    return days.some((day) => day.date === key)
-  }
-
-  /**
-   * 取指定时间之前最近的交易日（默认当前时刻，**不含当日**）
-   *
-   * 常用于「前一交易日」类计算（如超短线策略里取昨日 K 线）。
-   * 若日历窗口内没有更早的交易日（如传入日期早于窗口左边界），返回 null。
-   */
-  async getPrevTradingDay(date: Date = new Date()): Promise<ThsTradingDay | null> {
-    const days = await this.getTradingDays()
-    const key = this.toShanghaiDateKey(date)
-
-    // 列表按时间升序，且 yyyyMMdd 的字典序即时间序，故从后往前找第一个更早的
-    for (let i = days.length - 1; i >= 0; i--) {
-      if (days[i].date < key) return days[i]
-    }
-    return null
-  }
-
-  /**
    * 服务层入参校验
    *
    * 本模块没有 controller，不经过全局 ValidationPipe，DTO 上的校验装饰器**不会自动生效**，
@@ -256,26 +201,6 @@ export class ApiThsService {
     if (messages.length > 0) {
       throw new BadRequestException(messages.join('; '))
     }
-  }
-
-  /** 校验 K 线时间窗口：本地拦截方向相反或明显超限的请求，避免白打一次上游 */
-  private assertKlineWindow(dto: HistoricalKlineQueryDto): void {
-    if (dto.end < dto.start) {
-      throw new BadRequestException('结束时间不能早于起始时间')
-    }
-
-    const windowMs = dto.end - dto.start
-    if (windowMs > THS_KLINE_MAX_WINDOW_MS) {
-      const days = Math.ceil(windowMs / (24 * 60 * 60 * 1000))
-      throw new BadRequestException(`K 线时间窗口不能超过 10 年（当前约 ${days} 天）`)
-    }
-  }
-
-  /** 把时间转成 Asia/Shanghai 的 `yyyyMMdd`（与日历条目的 date 同格式，可直接比较） */
-  private toShanghaiDateKey(date: Date): string {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai' })
-      .format(date)
-      .replace(/-/g, '')
   }
 
   /** 把资产类型入参拼成上游要求的逗号分隔格式（去重、去空；省略时返回 undefined 表示不过滤） */

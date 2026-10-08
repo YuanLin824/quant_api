@@ -7,9 +7,6 @@ export const THS_REQUEST_TIMEOUT_MS = 10_000
 /** 标的列表端点路径 */
 export const THS_TICKER_LIST_PATH = '/api/meta/tickers/list'
 
-/** 历史 K 线端点路径 */
-export const THS_KLINE_PATH = '/api/a-share/prices/historical'
-
 /** 交易日历端点路径（无入参，固定返回近一年） */
 export const THS_TRADING_DAYS_PATH = '/api/a-share/calendar/trading-days'
 
@@ -20,27 +17,6 @@ export const THS_TRADING_DAYS_PATH = '/api/a-share/calendar/trading-days'
  * 否则每次判断「今天是不是交易日」都要打一次上游。
  */
 export const THS_CALENDAR_CACHE_TTL_MS = 6 * 60 * 60 * 1000
-
-/** K 线周期（上游当前仅支持日线） */
-export const THS_KLINE_INTERVALS = ['1d'] as const
-
-/** K 线周期类型 */
-export type ThsKlineInterval = (typeof THS_KLINE_INTERVALS)[number]
-
-/** 复权方式 */
-export const THS_ADJUST_TYPES = ['none', 'forward', 'backward'] as const
-
-/** 复权方式类型 */
-export type ThsAdjustType = (typeof THS_ADJUST_TYPES)[number]
-
-/**
- * 历史 K 线单次请求的时间窗口上限（毫秒）
- *
- * 上游限制「`end - start` 超过 10 年返回 code=1003」。此处取 10 年 + 10 天余量，
- * 只用于**本地拦截明显超限**的请求（如把秒当成毫秒传），精确边界仍交给上游判定——
- * 宁可漏放给上游，也不要因闰年误差误拒合法请求。
- */
-export const THS_KLINE_MAX_WINDOW_MS = 3660 * 24 * 60 * 60 * 1000
 
 /** 标的列表单页条数上限（上游限制，超出上游返回 code=1003） */
 export const THS_TICKER_LIST_MAX_LIMIT = 10_000

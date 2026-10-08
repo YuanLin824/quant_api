@@ -135,6 +135,14 @@ describe('ApiTdxService', () => {
       expect(mockClient.getKline).toHaveBeenCalledWith(expect.objectContaining({ count: 800 }))
     })
 
+    it('显式指定偏移时透传给上游（用于取更早的历史）', async () => {
+      await service.getKlines({ thscode: '600519.SH', start: 800, count: 400 })
+
+      expect(mockClient.getKline).toHaveBeenCalledWith(
+        expect.objectContaining({ start: 800, count: 400 })
+      )
+    })
+
     it.each([
       ['000001.SZ', 'sz000001'],
       ['430047.BJ', 'bj430047'],
@@ -152,6 +160,7 @@ describe('ApiTdxService', () => {
       [{ thscode: '600519.SH', category: '2h' }, 'K 线周期不在支持范围内'],
       [{ thscode: '600519.SH', count: 0 }, 'K 线根数至少为 1'],
       [{ thscode: '600519.SH', count: 801 }, 'K 线根数不能超过 800'],
+      [{ thscode: '600519.SH', start: -1 }, 'K 线偏移不能为负数'],
     ])('入参校验 %j → 400 且不发起连接', async (dto, message) => {
       await expect(service.getKlines(dto as never)).rejects.toBeInstanceOf(BadRequestException)
       await expect(service.getKlines(dto as never)).rejects.toThrow(message)

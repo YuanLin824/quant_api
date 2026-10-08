@@ -16,6 +16,7 @@ import { GLOBAL_CONFIG } from './config/global.config'
 import { PostgresModule } from './database/postgres.module'
 import { RedisModule } from './database/redis.module'
 import { RedisService } from './database/redis.service'
+import { StockKlineModule } from './stock-kline/stock-kline.module'
 import { StockSymbolsModule } from './stock-symbols/stock-symbols.module'
 import { StockTradingDaysModule } from './stock-trading-days/stock-trading-days.module'
 
@@ -54,6 +55,7 @@ import { StockTradingDaysModule } from './stock-trading-days/stock-trading-days.
     PostgresModule,
     RedisModule,
     AuthModule,
+    StockKlineModule,
     StockSymbolsModule,
     StockTradingDaysModule,
     ApiTdxModule,

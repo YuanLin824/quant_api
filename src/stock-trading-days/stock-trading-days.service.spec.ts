@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common'
-import { FindOperator, type Repository } from 'typeorm'
+import type { Repository } from 'typeorm'
 import type { ApiThsService } from '../api-ths/api-ths.service'
 import type { ThsTradingDay } from '../api-ths/api-ths.types'
 import type { StockTradingDay } from './entities/stock-trading-day.entity'
@@ -97,36 +97,6 @@ describe('StockTradingDaysService', () => {
 
       releaseFetch(makeDays(['20261008']))
       await first
-    })
-  })
-
-  describe('listStockTradingDays（查询）', () => {
-    /** 取出 find 的查询条件 */
-    const findWhere = (): Record<string, unknown> =>
-      (mockRepo.find.mock.calls[0][0] as { where: Record<string, unknown> }).where
-
-    it('无参数：不过滤日期，按升序返回', async () => {
-      await service.listStockTradingDays()
-
-      expect(mockRepo.find).toHaveBeenCalledWith({ where: {}, order: { date: 'ASC' } })
-    })
-
-    it('同时给 start 与 end：闭区间（Between）', async () => {
-      await service.listStockTradingDays('20260101', '20261231')
-
-      expect((findWhere().date as FindOperator<unknown>).type).toBe('between')
-    })
-
-    it('只给 start：大于等于', async () => {
-      await service.listStockTradingDays('20260101')
-
-      expect((findWhere().date as FindOperator<unknown>).type).toBe('moreThanOrEqual')
-    })
-
-    it('只给 end：小于等于', async () => {
-      await service.listStockTradingDays(undefined, '20261231')
-
-      expect((findWhere().date as FindOperator<unknown>).type).toBe('lessThanOrEqual')
     })
   })
 

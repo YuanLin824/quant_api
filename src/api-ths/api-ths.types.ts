@@ -38,32 +38,6 @@ export interface ThsTradingDay {
   date: string
 }
 
-/** 历史 K 线接口的 data 载荷 */
-export interface ThsKlineData {
-  /** 数据就绪时间（毫秒），为序列中最新一根 K 线的上游有效时间 */
-  timestamp: number
-  /** K 线列表 */
-  item: ThsPriceBar[]
-}
-
-/** 单根 K 线（`item[]` 元素） */
-export interface ThsPriceBar {
-  /** K 线日期（毫秒 Unix 时间戳） */
-  date_ms: number
-  /** 开盘价 */
-  open_price: number
-  /** 最高价 */
-  high_price: number
-  /** 最低价 */
-  low_price: number
-  /** 收盘价 */
-  close_price: number
-  /** 成交量（股） */
-  volume: number
-  /** 成交额（原始货币） */
-  turnover: number
-}
-
 /** 单条标的信息（`item[]` 元素） */
 export interface ThsTickerItem {
   /** 完整 thscode，如 `600519.SH` */
