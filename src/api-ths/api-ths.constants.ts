@@ -94,6 +94,8 @@ export const THS_CODE = {
   PARAM_CONFLICT: 1004,
   UNAUTHENTICATED: 2001,
   FORBIDDEN: 2003,
+  /** 该能力未开放外部接入，仅同花顺 AI 客户端可用（实测发现，上游错误码表中未列出） */
+  AI_CLIENT_ONLY: 2004,
   TICKER_NOT_FOUND: 3001,
   DATA_NOT_READY: 3002,
   UNSUPPORTED_ASSET_TYPE: 3004,

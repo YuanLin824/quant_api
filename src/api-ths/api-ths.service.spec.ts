@@ -357,6 +357,7 @@ describe('ApiThsService', () => {
     it.each([
       [2001, HttpStatus.SERVICE_UNAVAILABLE, '同花顺 API Key 缺失或无效'],
       [2003, HttpStatus.SERVICE_UNAVAILABLE, '同花顺 API Key 无权访问该接口'],
+      [2004, HttpStatus.SERVICE_UNAVAILABLE, '该数据仅同花顺 AI 客户端可用'],
       [3001, HttpStatus.NOT_FOUND, '标的不存在'],
       [4001, HttpStatus.SERVICE_UNAVAILABLE, '同花顺接口触发限流'],
       [5001, HttpStatus.BAD_GATEWAY, '同花顺服务内部错误'],

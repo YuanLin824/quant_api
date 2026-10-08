@@ -63,6 +63,10 @@ const THS_ERROR_MAP: Record<number, { status: number; message: string }> = {
     status: HttpStatus.SERVICE_UNAVAILABLE,
     message: '同花顺 API Key 无权访问该接口',
   },
+  [THS_CODE.AI_CLIENT_ONLY]: {
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    message: '该数据仅同花顺 AI 客户端可用, 未开放外部接入',
+  },
   [THS_CODE.TICKER_NOT_FOUND]: { status: HttpStatus.NOT_FOUND, message: '标的不存在' },
   [THS_CODE.DATA_NOT_READY]: {
     status: HttpStatus.SERVICE_UNAVAILABLE,
