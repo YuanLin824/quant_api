@@ -14,7 +14,8 @@
   同时对外提供手动触发同步的接口（需登录）
 - **ApiThsModule** (`src/api-ths/`) — 同花顺数据源接入，纯服务层（无 controller），契约见 `API_THS.md`；
   已实现「标的列表获取」「历史 K 线」「交易日历」，并收口通用请求层（鉴权 / 超时 / 信封解包 / 错误码映射）
-- **ApiTdxModule** (`src/api-tdx/`) — 通达信数据源接入，纯服务层（无 controller），当前为空骨架
+- **ApiTdxModule** (`src/api-tdx/`) — 通达信数据源接入，纯服务层（无 controller），契约见 `API_TDX.md`；
+  基于 `node-tdx-market` 的 **TCP 长连接**（懒连接、断线重连），已实现分时数据（当日 / 历史分时）
 - **Common** (`src/common/`) — 跨模块共享件：`BaseEntity` 实体基类、全局异常过滤器、请求日志中间件
 - **Config** (`src/config/`) — 配置集中管理：`ENV_KEYS` 常量、`registerAs` 命名空间配置、Winston 日志器
 - **PostgresModule** (`src/database/postgres.module.ts`) — TypeORM 数据源配置
@@ -63,6 +64,12 @@
     - **不做「标记消失」**：上游每次只返回近一年窗口，本表保留全部历史——窗口滑动不该删除更早的交易日，实体因此也不需要 `delistedAt` 那类失效标记
     - **主键用 `date`（yyyyMMdd）**：与 `thscode` 同理，天然唯一且稳定，让 upsert 的冲突键与主键合一
     - **窗口右边界是「今日」**：日历只有过去、没有未来，所以「上一交易日」可算、「下一交易日」不能算
+
+11. **通达信数据源（api-tdx）**: 基于 `node-tdx-market` 直连通达信公开行情服务器（**TCP 长连接**，非 HTTP，免费零鉴权），是项目里第二个长连接依赖（第一个是 Redis）。
+    - **连接所有权在模块**（与 `RedisModule` 同范式）：工厂创建客户端并挂 `error`/`connected` 监听，`onModuleDestroy` 里断开；但**懒连接的触发在 service**——首次调用才 `connect()` 并缓存 Promise，失败或断线事件时清空以便重连（启动阶段不连接，行情服务器不可用不影响应用启动）
+    - **代码与单位转换在模块内收口**：对外仍是项目的 thscode（`600519.SH`），内部转 `sh600519`；价格由上游的「厘」整数换算为元
+    - ⚠️ **历史分时的均价字段不可靠**：实测上游返回的原始值失真（茅台均价算出 1~3 元），且更早日期可能无数据，已在类型注释中标注
+    - **`main.ts` 已调用 `app.enableShutdownHooks()`**：SIGTERM / SIGINT（容器停止、Ctrl+C）会触发 `onModuleDestroy`，TCP 连接与 Redis 一并优雅释放（此前未启用时它们只在显式 `app.close()` 时才触发）
 
 > `@nestjs/schedule` 锁定在 **6.x**：12.x 起该包 ESM-only，与本项目 CJS 体系冲突，详见 `development.md` 的定时任务章节。
 

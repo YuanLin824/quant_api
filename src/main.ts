@@ -20,6 +20,10 @@ async function bootstrap() {
 
   configureApp(app)
 
+  // 启用关闭钩子：SIGTERM / SIGINT（容器停止、Ctrl+C）会触发 onModuleDestroy / onApplicationShutdown，
+  // 让 TCP 长连接（通达信）与 Redis 等资源优雅释放——否则它们只在显式 app.close() 时才触发
+  app.enableShutdownHooks()
+
   const globalConfig = app.get(ConfigService).get<IGlobalConfig>(CONFIG_MODULES.GLOBAL)!
   await app.listen(globalConfig.port)
 }
